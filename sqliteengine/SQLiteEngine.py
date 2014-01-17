@@ -90,6 +90,7 @@ class SQLiteEngine(object):
                 query =  "INSERT INTO %s" % item["__table_name"] + "(" + ",".join(columns) + ")"
                 query += "VALUES (" + ",".join(list(item.get(value) for value in columns)) + ");"
                 self.cursor.execute(query, column_values)
+        self.connection.commit()
         return True
 
 
