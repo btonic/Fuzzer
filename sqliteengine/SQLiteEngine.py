@@ -105,11 +105,11 @@ class Connection(object):
         self.database = sqlite3.connect(database)
         self.connection = self.database.cursor
         self.commit_after_execute = commit_after_execute
-    def execute(self,*args,*kwargs):
+    def execute(self,*args,**kwargs):
         """
-        Execute an sql query.
+        Execute an sql query and commit immediately afterwards.
         """
-        self.connection.execute(*args,**kwargs)
+        self.connection.execute(args,kwargs)
         if self.commit_after_execute:
             self.database.commit()
     def cursor(self):
