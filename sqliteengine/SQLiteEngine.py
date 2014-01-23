@@ -29,7 +29,7 @@ class SQLiteEngine(object):
         if table_exists:
             raise TableAlreadyExists("Table: `%s` already exists." % table_name)
         return True
-
+    
     def cache_tablenames(self):
         """
         Create an in-memory list of all table names.
@@ -95,8 +95,9 @@ class SQLiteEngine(object):
                 raise InvalidTablename("The table `%s` does not exist." % item["__table_name"])
 
             columns = set(list(item.keys())) - set(["__table_name"])
+            column_values = list(item.get(value) for value in columns)
             query =  "INSERT INTO %s" % item["__table_name"] + "(" + ",".join(columns) + ")"
-            query += "VALUES (" + ",".join(list(item.get(value) for value in columns)) + ");"
+            query += "VALUES (" + ("?" * len(columns))+ ")"
             self.cursor.execute(query, column_values)
         return True
 
