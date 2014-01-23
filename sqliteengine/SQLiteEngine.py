@@ -1,15 +1,15 @@
 import sqlite3
 
 class SQLiteEngine(object):
-    def __init__(self, database_path, cache_tablenames = False):
+    def __init__(self, database_path, tables_to_cache = False):
 
-        self.cache_tablenames = cache_tablenames
+        self.tables_to_cache = tables_to_cache
         self.connection = Connection(database_path)
         self.cursor = self.connection.cursor()
 
         self.insert_pool = []
 
-        if self.cache_tablenames:
+        if self.tables_to_cache:
             self.cached_tablenames = self.cache_tablenames()
             
     def create_database(self, table_name, *columns):
@@ -24,7 +24,7 @@ class SQLiteEngine(object):
                                     ])
             query += ");"
             self.cursor.execute(query)
-            if self.cache_tablenames:
+            if self.tables_to_cache:
                 self.cached_tablenames = self.cache_tablenames()
         if table_exists:
             raise TableAlreadyExists("Table: `%s` already exists." % table_name)
@@ -81,7 +81,7 @@ class SQLiteEngine(object):
         """
         for item in self.insert_pool:
             table_exists = True
-            if self.cache_tablenames:
+            if self.tables_to_cache:
                 if item["__table_name"] in self.cached_tablenames:
                     pass
                 else:
@@ -127,7 +127,7 @@ class GeneralException(Exception):
     def __str__(self):
         return str(self.message)
 
-class InvalidTableName(GeneralException):
+class InvalidTablename(GeneralException):
     pass
 class TableAlreadyExists(GeneralException):
     pass

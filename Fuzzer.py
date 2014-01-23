@@ -2,15 +2,15 @@ import fuzzer.sqliteengine as SQLEngine
 import random, datetime
 
 class Fuzzer(object):
-    def __init__(self, database = ":memory:", cache_tablenames = True):
-        self.sql_engine = SQLEngine.SQLiteEngine(database, cache_tablenames = cache_tablenames)
-
+    def __init__(self, database = ":memory:", cache_tablenames = True, table_name = "attempts"):
+        self.sql_engine = SQLEngine.SQLiteEngine(database, tables_to_cache = cache_tablenames)
+        self.table_name = table_name
     def initialize(self):
         """
         Initialize the database, if there is not already one.
         """
         try:
-            self.sql_engine.create_database("attempts",
+            self.sql_engine.create_database(self.table_name,
                                            ("attempt_id", "INTEGER PRIMARY KEY"),
                                            ("attempted",  "TEXT"),
                                            ("prohibited", "TEXT"),
@@ -42,7 +42,6 @@ class Fuzzer(object):
 
       conjugation_template = \
       """
-      self.sql_engine.append_to_pool({item}, {table_name})
       yield {variable_conjugation}
       """
 
@@ -67,9 +66,6 @@ class Fuzzer(object):
                                                prohibited_list = prohibited_characters
                                                ) + \
                                                conjugation_template.format(
-                                               item                 = "{'attempted': %s, 'prohibited': %s, 'created_at': %s}" % (eval("+".join(list("chr(%s)" % ("var"+str(d_level)) for d_level in range(length)))),
-                                                                                                                                 ",".join(list(char for char in prohibited_characters)),
-                                                                                                                                 str(datetime.datetime.now().strftime("%c"))),
                                                variable_conjugation = output_format.format(fuzzed_string = "+".join(list("chr(%s)" % ("var"+str(d_level)) for d_level in range(length))))
                                                )
                            )
@@ -86,9 +82,6 @@ class Fuzzer(object):
                                                )\
                                                if depth_level != length else \
                                                conjugation_template.format(
-                                               item                 = "{'attempted': %s, 'prohibited': %s, 'created_at': %s}" % (eval("+".join(list("chr(%s)" % ("var"+str(d_level)) for d_level in range(length)))),
-                                                                                                                                 ",".join(list(char for char in prohibited_characters)),
-                                                                                                                                 str(datetime.datetime.now().strftime("%c"))),
                                                variable_conjugation = output_format.format(fuzzed_string = "+".join(list("chr(%s)" % ("var"+str(d_level)) for d_level in range(length))))
                                                )
                            )
@@ -100,8 +93,22 @@ class Fuzzer(object):
                 char = prohibited_characters[0]
                 while char in prohibited_characters:
                     char = chr(random.randrange(0,256))
-                
+                    
 
-
-
-
+class Result(object):
+    def __init__(self, fuzzer_instance, attempt, prohibited):
+        self.engine_instance = fuzzer_instance.sql_instance
+        self.table_name = fuzzer_instance.table_name
+        self.attempt = attempt
+        self.prohibited = prohibited
+        self.success = False
+    def success(self):
+        self.engine_instance.append_to_pool(self._generate_item(True), self.table_name)
+    def fail(self):
+        self.engine_instance.append_to_pool(self._generate_item(False), self.table_name)
+    def _generate_item(self, success_value):
+        return {"created_at": datetime.datetime.now().strftime("%c"),
+                "updated_at": datetime.datetime.now().strftime("%c"),
+                "prohibited": self.prohibited,
+                "attempted" : self.attempt,
+                "successful": success_value}
