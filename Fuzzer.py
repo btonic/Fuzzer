@@ -122,11 +122,11 @@ class Fuzzer(object):
                 for index in range(length):
                     done = False
                     while not done:
-                        attempted_char = random.randrange(0, maximum)
-                        if attempted_char in prohibit:
+                        char_value_attempt = random.randrange(0, maximum)
+                        if character_evaluator(char_value_attempt) in prohibit:
                             continue
                         else:
-                            attempt[index] = attempted_char
+                            temp_list[index] = char_value_attempt
                             done = True
                 attempt = "".join(
                 list(character_evaluator(value) for value in temp_list
