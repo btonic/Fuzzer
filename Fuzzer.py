@@ -98,13 +98,17 @@ class Fuzzer(object):
                         pass_attempt = True
                 if pass_attempt:
                     pass_attempt = False
+                    try:
+                        self.increment(temp_list, 0, maximum=maximum)
+                    except MaximumIncrementReached:
+                        done = True
                     continue
                 else:
                     yield Result(self, attempt, prohibited=prohibit)
-                try:
-                    self.increment(temp_list, 0, maximum=maximum)
-                except MaximumIncrementReached:
-                    done = True
+                    try:
+                        self.increment(temp_list, 0, maximum=maximum)
+                    except MaximumIncrementReached:
+                        done = True
         if (random_generation == True) and (prohibit == None):
             while True:
                 attempt = output_format.format(fuzzed_string="".join(
