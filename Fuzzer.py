@@ -36,11 +36,15 @@ class Fuzzer(object):
             if values[index]+1 >= maximum:
                 if reset:
                     values[index] = 0
-                self.increment(values, index - 1,
-                               maximum=maximum, reset=reset)
+                try:
+                    self.increment(values, index - 1,
+                                   maximum=maximum, reset=reset)
+                except MaximumIncrementReached:
+                    raise MaximumIncrementReached
             else:
                 values[index] = values[index] + 1
-        return
+        raise MaximumIncrementReached
+
     def fuzz(self, random_generation=False, prohibit=None,
                    length=5, output_format="{'fuzzed_string'}",
                    character_evaluator=chr, maximum=255):
@@ -51,7 +55,7 @@ class Fuzzer(object):
         number into its character form.
         """
         if maximum >= 255 and character_evaluator == chr:
-            raise TooHighForChr("maximum is too large for chr,\
+            raise TooHighForChr("`maximum` is too large for chr,\
                                  must be between 0 and 255." % maximum)
         if prohibit != None:
             if type(prohibit) != type(list()):
@@ -69,19 +73,71 @@ class Fuzzer(object):
         if type(random_generation) != type(bool()):
             raise TypeError("random_generation should be a bool.")
 
-        if not random_generation:
+        if random_generation == False and prohibit == None:
             done = False
             temp_list = [0]*length
             while not done:
                 attempt = output_format.format(fuzzed_string="".join(
-                 list(character_evaluator(character) for character in temp_list)
-                 )
+                list(character_evaluator(character) for character in temp_list))
                 )
-                yield Result(self, attempt, prohibit)
-                self.increment(temp_list, 0, maximum=maximum)
+                yield Result(self, attempt, prohibited=prohibit)
+                try:
+                    self.increment(temp_list, 0, maximum=maximum)
+                except MaximumIncrementReached:
+                    done = True
+        if (random_generation == False) and (prohibit != None):
+            done = False
+            pass_attempt = False
+            temp_list = [0]*length
+            while not done:
+                attempt = output_format.format(fuzzed_string="".join(
+                list(character_evaluator(character) for character in temp_list))
+                )
+                for character in attempt:
+                    if character in prohibit:
+                        pass_attempt = True
+                if pass_attempt:
+                    pass_attempt = False
+                    continue
+                else:
+                    yield Result(self, attempt, prohibited=prohibit)
+                try:
+                    self.increment(temp_list, 0, maximum=maximum)
+                except MaximumIncrementReached:
+                    done = True
+        if (random_generation == True) and (prohibit == None):
+            while True:
+                attempt = output_format.format(fuzzed_string="".join(
+                list(character_evaluator(random.randrange(0, maximum))
+                     for index in range(length))
+                ))
+                yield Result(self, attempt, prohibited=prohibit)
+        if (random_generation == True) and (prohibit != None):
+            while True:
+                temp_list = [0]*length
+                for index in range(length):
+                    done = False
+                    while not done:
+                        attempted_char = random.randrange(0, maximum)
+                        if attempted_char in prohibit:
+                            continue
+                        else:
+                            attempt[index] = attempted_char
+                            done = True
+                attempt = "".join(
+                list(character_evaluator(value) for value in temp_list
+                ))
+                yield Result(self, attempt, prohibited=prohibit)
+
+
+
 
 class Result(object):
-    def __init__(self, fuzzer_instance, attempt, prohibited):
+    """
+    Used to determine success or failure of an attempt, then submit value into
+    engine insertion queue.
+    """
+    def __init__(self, fuzzer_instance, attempt, prohibited=None):
         self.engine_instance = fuzzer_instance.sql_instance
         self.table_name = fuzzer_instance.table_name
         self.attempt = attempt
@@ -106,7 +162,8 @@ class Result(object):
         """
         return {"created_at": datetime.datetime.now().strftime("%c"),
                 "updated_at": datetime.datetime.now().strftime("%c"),
-                "prohibited": self.prohibited,
+                "prohibited": "" if self.prohibited == None \
+                                 else self.prohibited,
                 "attempted" : self.attempt,
                 "successful": success_value}
 
@@ -124,5 +181,10 @@ class GeneralException(Exception):
 class TooHighForChr(GeneralException):
     """
     Raised to handle a value being too large for `chr`.
+    """
+    pass
+class MaximumIncrementReached(GeneralException):
+    """
+    Raised to alert that all elements of the list have reached their maximum.
     """
     pass
