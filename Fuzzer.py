@@ -32,7 +32,7 @@ class Fuzzer(object):
         """
         Handles incrementation for fuzzer.
         """
-        if index >= 0:
+        if index > (-1):
             if values[index]+1 >= maximum:
                 if reset:
                     values[index] = 0
@@ -40,13 +40,14 @@ class Fuzzer(object):
                     self.increment(values, index - 1,
                                    maximum=maximum, reset=reset)
                 except MaximumIncrementReached:
-                    raise MaximumIncrementReached
+                    raise MaximumIncrementReached("Incrementation limit reached.")
             else:
                 values[index] = values[index] + 1
-        raise MaximumIncrementReached
+                return
+        raise MaximumIncrementReached("Incrementation limit reached.")
 
     def fuzz(self, random_generation=False, prohibit=None,
-                   length=5, output_format="{'fuzzed_string'}",
+                   length=5, output_format="{fuzzed_string}",
                    character_evaluator=chr, maximum=255):
         """
         Generates all possibilities with a given length. If random is passed,
@@ -54,9 +55,9 @@ class Fuzzer(object):
         0 and `maximum`. The character_evaluator will be used to convert the
         number into its character form.
         """
-        if maximum >= 255 and character_evaluator == chr:
+        if maximum > 255 and character_evaluator == chr:
             raise TooHighForChr("`maximum` is too large for chr,\
-                                 must be between 0 and 255." % maximum)
+                                 must be between 0 and 255.")
         if prohibit != None:
             if type(prohibit) != type(list()):
                 raise TypeError("`prohibit` must be a list.")
@@ -82,7 +83,7 @@ class Fuzzer(object):
                 )
                 yield Result(self, attempt, prohibited=prohibit)
                 try:
-                    self.increment(temp_list, 0, maximum=maximum)
+                    self.increment(temp_list, length - 1, maximum=maximum)
                 except MaximumIncrementReached:
                     done = True
         if (random_generation == False) and (prohibit != None):
@@ -142,9 +143,9 @@ class Result(object):
     engine insertion queue.
     """
     def __init__(self, fuzzer_instance, attempt, prohibited=None):
-        self.engine_instance = fuzzer_instance.sql_instance
+        self.engine_instance = fuzzer_instance.sql_engine
         self.table_name = fuzzer_instance.table_name
-        self.attempt = attempt
+        self.value = attempt
         self.prohibited = prohibited
     def success(self):
         """
@@ -168,7 +169,7 @@ class Result(object):
                 "updated_at": datetime.datetime.now().strftime("%c"),
                 "prohibited": "" if self.prohibited == None \
                                  else self.prohibited,
-                "attempted" : self.attempt,
+                "attempted" : self.value,
                 "successful": success_value}
 
 class GeneralException(Exception):
