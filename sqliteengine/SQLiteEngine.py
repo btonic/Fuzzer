@@ -10,11 +10,12 @@ class SQLiteEngine(object):
         self.tables_to_cache = tables_to_cache
         self.connection = Connection(database_path)
         self.cursor = self.connection.cursor()
+        self.cached_tablenames = []
 
         self.insert_pool = []
 
         if self.tables_to_cache:
-            self.cached_tablenames = self.cache_tablenames()
+            self.cache_tablenames()
 
     def create_database(self, table_name, *columns):
         """
@@ -43,15 +44,17 @@ class SQLiteEngine(object):
         table_names = []
         for table in self.all_tables():
             table_names.append(table[0][0])
-        return table_names
+        if not self.tables_to_cache:
+            self.tables_to_cache = True
+        self.cached_tablenames = table_names
 
     def table_exists(self, table_name):
         """
         Search for a table name in the database.
         """
-        query = "SELECT name FROM sqlite_master \
-                 WHERE type = 'table' AND name = '?';"
-        if len(self.cursor.execute(query, table_name)) == 1:
+        query = "SELECT name FROM sqlite_master\
+                 WHERE type = 'table' AND name = ?;"
+        if len(self.cursor.execute(query, table_name).fetchall()) == 1:
             return True
         else:
             return False
@@ -115,15 +118,16 @@ class Connection(object):
     """
     def __init__(self, database, commit_after_execute=True):
         self.database = sqlite3.connect(database)
-        self.connection = self.database.cursor
+        self.connection = self.database.cursor()
         self.commit_after_execute = commit_after_execute
-    def execute(self, *args, **kwargs):
+    def execute(self, sql_query, *args):
         """
         Execute an sql query and commit immediately afterwards.
         """
-        self.connection.execute(args, kwargs)
+        self.connection.execute(sql_query, *args)
         if self.commit_after_execute:
             self.database.commit()
+        return self.connection
     def cursor(self):
         """
         Return self because execute is accessable through the class already.
