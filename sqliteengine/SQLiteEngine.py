@@ -1,4 +1,5 @@
 import sqlite3
+from threading import Lock
 
 class SQLiteEngine(object):
     """
@@ -12,6 +13,8 @@ class SQLiteEngine(object):
         self.cursor = self.connection.cursor()
         self.cached_tablenames = []
 
+        self.pool_lock = Lock()
+        self.pool_lock_activated = False
         self.insert_pool = []
 
         if self.tables_to_cache:
@@ -43,7 +46,7 @@ class SQLiteEngine(object):
         """
         table_names = []
         for table in self.all_tables():
-            table_names.append(table[0][0])
+            table_names.append(table[0])
         if not self.tables_to_cache:
             self.tables_to_cache = True
         self.cached_tablenames = table_names
@@ -54,7 +57,7 @@ class SQLiteEngine(object):
         """
         query = "SELECT name FROM sqlite_master\
                  WHERE type = 'table' AND name = ?;"
-        if len(self.cursor.execute(query, table_name).fetchall()) == 1:
+        if len(self.cursor.execute(query, (table_name,)).fetchall()) == 1:
             return True
         else:
             return False
@@ -65,7 +68,7 @@ class SQLiteEngine(object):
         """
         query = "SELECT name FROM sqlite_master \
                  WHERE type = 'table'"
-        return self.cursor.execute(query)
+        return self.cursor.execute(query).fetchall()
 
     def append_to_pool(self, item, table_name):
         """
@@ -80,6 +83,8 @@ class SQLiteEngine(object):
         if new_item.get("__table_name") != None:
             raise ItemKeyReserved("`__table_name` is a reserved key.")
         new_item["__table_name"] = table_name
+        while self.pool_lock_activated:
+            pass
         self.insert_pool.append(new_item)
         return True
 
@@ -87,7 +92,8 @@ class SQLiteEngine(object):
         """
         Insert all items currently in the pool to the database.
         """
-        for item in self.insert_pool:
+        current_pool = list(self.insert_pool)
+        for item in current_pool:
             table_exists = True
             if self.tables_to_cache:
                 if item["__table_name"] in self.cached_tablenames:
@@ -107,8 +113,16 @@ class SQLiteEngine(object):
             column_values = list(item.get(value) for value in columns)
             query = "INSERT INTO %s" % item["__table_name"] + \
                     "(" + ",".join(columns) + ")"
-            query += "VALUES (" + ("?" * len(columns))+ ")"
+            query += "VALUES (" + (",".join(
+                             list("?" for x in range(len(columns)))))+\
+                             ")"
             self.cursor.execute(query, column_values)
+
+        if self.pool_lock.acquire():
+            self.pool_lock_activated = True
+            self.insert_pool = list(set(self.insert_pool) - set(current_pool))
+            self.pool_lock_activated = False
+            self.pool_lock.release()
         return True
 
 class Connection(object):
