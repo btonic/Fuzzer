@@ -120,7 +120,8 @@ class SQLiteEngine(object):
 
         if self.pool_lock.acquire():
             self.pool_lock_activated = True
-            self.insert_pool = list(set(self.insert_pool) - set(current_pool))
+            self.insert_pool = list(value for value in current_pool
+                                    if value not in self.insert_pool)
             self.pool_lock_activated = False
             self.pool_lock.release()
         return True
