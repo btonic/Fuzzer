@@ -40,7 +40,8 @@ class Fuzzer(object):
                     self.increment(values, index - 1,
                                    maximum=maximum, reset=reset)
                 except MaximumIncrementReached:
-                    raise MaximumIncrementReached("Incrementation limit reached.")
+                    raise MaximumIncrementReached(
+                          "Incrementation limit reached.")
             else:
                 values[index] = values[index] + 1
                 return
