@@ -111,7 +111,78 @@ class TestSQLiteEngine(unittest.TestCase):
             ),
             msg="append_to_pool should raise an error, __table_name is in item."
         )
+    def test_commit_to_pool(self):
+        """
+        Test to make sure all items in the pool are committed.
+        """
+        self.engine.create_database(self.testing_table_name,
+                                   ("test_row", "INT"))
 
+        self.assertTrue(
+            len(self.engine.insert_pool) == 0,
+            msg="Initial insert pool should have no elements."
+        )
+
+        self.engine.append_to_pool(
+            {"test_row":20},
+            self.testing_table_name
+        )
+        self.assertTrue(
+            len(self.engine.insert_pool) == 1,
+            msg="There should only be one element in the inser pool."
+        )
+
+        self.engine.commit_pool()
+
+        self.assertTrue(
+            len(self.engine.insert_pool) == 0,
+            msg="There should be no elements in the insert pool after commit."
+        )
+
+class TestConnection(unittest.TestCase):
+    """
+    Test the connection used by the SQLiteEngine.
+    """
+    def setUp(self):
+        self.connection = SQLEngine.Connection(":memory:")
+        self.no_commit_connection = SQLEngine.Connection(":memory:")
+        self.testing_table_name = "test_table"
+    def tearDown(self):
+        self.connection.close()
+    def test_execute(self):
+        """
+        Mak sure that the execution passthrough works as expected.
+        """
+        self.connection.execute(
+            "CREATE TABLE %s(testing_column INT);" %
+            self.testing_table_name
+        )
+        self.connection.execute(
+            "INSERT INTO %s VALUES (1);" %
+            self.testing_table_name
+        )
+        self.assertTrue(
+            len(
+                self.connection.execute(
+                    "SELECT * FROM %s;" %
+                    self.testing_table_name
+                ).fetchall()
+            ) == 1,
+            msg="The connection should commit immediately after execute."
+        )
+        self.no_commit_connection.execute(
+            "INSERT INTO %s VALUES (2);" %
+            self.testing_table_name
+        )
+        self.assertTrue(
+            len(
+                self.no_commit_connection.execute(
+                    "SELECT * FROM %s" %
+                    self.testing_table_name
+                ).fetchall()
+            ) == 1,
+            msg="There should be no items committed by a no_commit_connection."
+        )
 
 
 if __name__ == "__main__":
