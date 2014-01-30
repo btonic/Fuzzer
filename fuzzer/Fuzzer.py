@@ -1,4 +1,4 @@
-import sqliteengine as SQLEngine
+import fuzzer.sqliteengine as SQLEngine
 import random, datetime
 
 class Fuzzer(object):
