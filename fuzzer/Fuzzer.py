@@ -7,7 +7,9 @@ class Fuzzer(object):
     and catch up or tail an already running fuzzer.
     """
     def __init__(self, database=":memory:", cache_tablenames=True,
-                 table_name="attempts"):
+                 table_name=datetime.datetime.today().strftime(
+                                                     "%m%d%yattempts")):
+
         self.sql_engine = SQLEngine.SQLiteEngine(database,
                           tables_to_cache=cache_tablenames)
         self.table_name = table_name

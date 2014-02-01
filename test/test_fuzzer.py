@@ -34,12 +34,11 @@ class TestFuzzer(unittest.TestCase):
 
         for number, result in enumerate(self.fuzzer.fuzz()):
             if number >= 600:
-                self.fuzzer.stop()
                 break
             for character in result.value:
                 self.assertTrue(
-                    ord(character) <= 256,
-                    msg="Default fuzzer settings should only return ASCII values."
+                    0 < ord(character) < 256,
+                    msg="Default parameters should return ASCII characters."
                 )
 
         prohibited = ["a", "b"]
@@ -47,12 +46,29 @@ class TestFuzzer(unittest.TestCase):
                                    self.fuzzer.fuzz(
                                         prohibit=prohibited
                                    )
-                              )
-            for character in restult.value:
+                              ):
+            if number >= 600:
+                break
+            for character in result.value:
                 self.assertTrue(
                     character not in prohibited,
                     msg="A character in the result was not supposed to be present."
                 )
+        def testing_evaluator(value):
+            return chr(value)
+        for number, result in enumerate(
+                                  self.fuzzer.fuzz(
+                                       character_evaluator=testing_evaluator
+                                  )
+                              ):
+            if number >= 600:
+                break
+            for character in result.value:
+                self.assertTrue(
+                    0 < ord(character) < 256,
+                    msg="A custom character_evaluator should work."
+                )
+
 
 
 
