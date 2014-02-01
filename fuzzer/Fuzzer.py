@@ -8,7 +8,7 @@ class Fuzzer(object):
     """
     def __init__(self, database=":memory:", cache_tablenames=True,
                  table_name=datetime.datetime.today().strftime(
-                                                     "%m%d%yattempts")):
+                                                     "attempts%m%d%y")):
 
         self.sql_engine = SQLEngine.SQLiteEngine(database,
                           tables_to_cache=cache_tablenames)
@@ -35,24 +35,28 @@ class Fuzzer(object):
         Trigger SQL engine to commit all values awaiting insertion.
         """
         self.sql_engine.commit_pool()
-    def increment(self, values, index, maximum=255, reset=True):
+    def increment(self, values, index, maximum=255, reset=True, 
+                  _called_from_func = False):
         """
         Handles incrementation for fuzzer.
         """
-        if index > (-1):
-            if values[index]+1 >= maximum:
+        if index >= 0:
+            if (values[index]+1) >= maximum:
+                if _called_from_func and index == 0:
+                    raise MaximumIncrementReached(
+                          "Incrementation limit reached")
                 if reset:
                     values[index] = 0
                 try:
                     self.increment(values, index - 1,
-                                   maximum=maximum, reset=reset)
+                                   maximum=maximum, reset=reset,
+                                   _called_from_func = True
+                                   )
                 except MaximumIncrementReached:
-                    raise MaximumIncrementReached(
-                          "Incrementation limit reached.")
+                    return
             else:
                 values[index] = values[index] + 1
                 return
-        raise MaximumIncrementReached("Incrementation limit reached.")
 
     def fuzz(self, random_generation=False, prohibit=None,
                    length=5, output_format="{fuzzed_string}",
