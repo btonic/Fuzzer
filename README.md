@@ -62,3 +62,20 @@ Now we can begin generating values. To begin, we can simply use the `.fuzz()` ge
 '\x00\x00\x00\x00\x04'
 #95 more values...
 ```
+
+However, notice how `result` in this example is not a `string`. Instead it is a `Result` instance. The result instance has the `.value` variable set to the generated string, and allows use of the `.success()` and `.fail()` functions to define the status of the attempt. These functions do not have to be used, but they provide access to `Fuzzer`'s database insertion queue.
+
+If you decide to use `.success()` or `.fail()`, the attempt will automatically be added to an insertion pool in the SQL backend engine, awaiting insertion into the database. In order to insert all values in the pool to the database, you must call `fuzz_instance.commit_to_datbaase()`. The flow is shown below:
+
+```
+Fuzzer.fuzz -> Result -> Result.success() or Result.fail() -> Result added to insertion pool -> Fuzzer.commit_to_database() -> Results inserted into database
+```
+
+The following parameters can be altered in the `fuzz()` function for refinement of values returned.
+
+* `random_generation`
+* `prohibit`
+* `length`
+* `output_format`
+* `character_evaluator`
+* `maximum`
