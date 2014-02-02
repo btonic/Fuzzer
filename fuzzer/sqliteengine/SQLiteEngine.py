@@ -34,7 +34,7 @@ class SQLiteEngine(object):
             query += ");"
             self.cursor.execute(query)
             if self.tables_to_cache:
-                self.cached_tablenames = self.cache_tablenames()
+                self.cache_tablenames()
         if table_exists:
             raise TableAlreadyExists("Table: `%s` already exists." % table_name)
         return True
@@ -92,7 +92,8 @@ class SQLiteEngine(object):
         """
         Insert all items currently in the pool to the database.
         """
-        current_pool = list(self.insert_pool)
+        if self.pool_lock.acquire():
+            current_pool = list(self.insert_pool)
         for item in current_pool:
             table_exists = True
             if self.tables_to_cache:
@@ -117,13 +118,11 @@ class SQLiteEngine(object):
                              list("?" for x in range(len(columns)))))+\
                              ")"
             self.cursor.execute(query, column_values)
-
-        if self.pool_lock.acquire():
-            self.pool_lock_activated = True
-            self.insert_pool = list(value for value in current_pool
-                                    if value not in self.insert_pool)
-            self.pool_lock_activated = False
-            self.pool_lock.release()
+        self.pool_lock_activated = True
+        self.insert_pool = list(value for value in current_pool
+                                if value not in self.insert_pool)
+        self.pool_lock_activated = False
+        self.pool_lock.release()
         return True
 
 class Connection(object):

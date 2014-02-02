@@ -35,8 +35,8 @@ class Fuzzer(object):
         Trigger SQL engine to commit all values awaiting insertion.
         """
         self.sql_engine.commit_pool()
-    def increment(self, values, index, maximum=255, reset=True, 
-                  _called_from_func = False):
+    def _increment(self, values, index, maximum=255, reset=True, 
+                  _called_from_func=False):
         """
         Handles incrementation for fuzzer.
         """
@@ -48,9 +48,9 @@ class Fuzzer(object):
                 if reset:
                     values[index] = 0
                 try:
-                    self.increment(values, index - 1,
+                    self._increment(values, index - 1,
                                    maximum=maximum, reset=reset,
-                                   _called_from_func = True
+                                   _called_from_func=True
                                    )
                 except MaximumIncrementReached:
                     return
@@ -95,7 +95,7 @@ class Fuzzer(object):
                 )
                 yield Result(self, attempt, prohibited=prohibit)
                 try:
-                    self.increment(temp_list, length - 1, maximum=maximum)
+                    self._increment(temp_list, length - 1, maximum=maximum)
                 except MaximumIncrementReached:
                     done = True
         if (random_generation == False) and (prohibit != None):
@@ -112,14 +112,14 @@ class Fuzzer(object):
                 if pass_attempt:
                     pass_attempt = False
                     try:
-                        self.increment(temp_list, 0, maximum=maximum)
+                        self._increment(temp_list, 0, maximum=maximum)
                     except MaximumIncrementReached:
                         done = True
                     continue
                 else:
                     yield Result(self, attempt, prohibited=prohibit)
                     try:
-                        self.increment(temp_list, 0, maximum=maximum)
+                        self._increment(temp_list, 0, maximum=maximum)
                     except MaximumIncrementReached:
                         done = True
         if (random_generation == True) and (prohibit == None):
