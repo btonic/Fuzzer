@@ -7,13 +7,13 @@ Installation
 ======
 To install Fuzzer, run:
 ```bash
-git clone git@github.com:ThatITNinja/Fuzzer.git
-python setup.py install
+git clone git@github.com:ThatITNinja/Fuzzer.git;
+python setup.py install;
 
 Then to make sure that it is installed(and importable), run:
 ```python
->>> import fuzzer
->>>
+>>> import fuzzer;
+>>>;
 
 Usage
 ======
