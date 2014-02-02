@@ -6,7 +6,7 @@ class Fuzzer(object):
     Fuzzer is used to either generate fuzzed values, or to read fuzzed values
     and catch up or tail an already running fuzzer.
     """
-    def __init__(self, database=":memory:", cache_tablenames=True,
+    def __init__(self, database="fuzzerdb.db", cache_tablenames=True,
                  table_name=datetime.datetime.today().strftime(
                                                      "attempts%m%d%y")):
 

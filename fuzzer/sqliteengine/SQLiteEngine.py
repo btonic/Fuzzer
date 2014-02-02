@@ -7,10 +7,8 @@ class SQLiteEngine(object):
     mass-commit.
     """
     def __init__(self, database_path, tables_to_cache=False):
-
+        self.database_path = database_path
         self.tables_to_cache = tables_to_cache
-        self.connection = Connection(database_path)
-        self.cursor = self.connection.cursor()
         self.cached_tablenames = []
 
         self.pool_lock = Lock()
@@ -24,6 +22,7 @@ class SQLiteEngine(object):
         """
         Create a table in the database if one does not exist.
         """
+        cursor = Connection(self.database_path)
         table_exists = self.table_exists(table_name)
         if not table_exists:
             query = "CREATE TABLE %s" % table_name
@@ -32,11 +31,12 @@ class SQLiteEngine(object):
                                     [tup for tup in columns]
                                     ])
             query += ");"
-            self.cursor.execute(query)
+            cursor.execute(query)
             if self.tables_to_cache:
                 self.cache_tablenames()
         if table_exists:
             raise TableAlreadyExists("Table: `%s` already exists." % table_name)
+        cursor.close()
         return True
 
     def cache_tablenames(self):
@@ -55,20 +55,26 @@ class SQLiteEngine(object):
         """
         Search for a table name in the database.
         """
+        cursor = Connection(self.database_path)
         query = "SELECT name FROM sqlite_master\
                  WHERE type = 'table' AND name = ?;"
-        if len(self.cursor.execute(query, (table_name,)).fetchall()) == 1:
+        if len(cursor.execute(query, (table_name,)).fetchall()) == 1:
+            cursor.close()
             return True
         else:
+            cursor.close()
             return False
 
     def all_tables(self):
         """
         Return the name of all tables in the database.
         """
+        cursor = Connection(self.database_path)
         query = "SELECT name FROM sqlite_master \
                  WHERE type = 'table'"
-        return self.cursor.execute(query).fetchall()
+        res = cursor.execute(query).fetchall()
+        cursor.close()
+        return res
 
     def append_to_pool(self, item, table_name):
         """
@@ -92,6 +98,7 @@ class SQLiteEngine(object):
         """
         Insert all items currently in the pool to the database.
         """
+        cursor = Connection(self.database_path)
         if self.pool_lock.acquire():
             current_pool = list(self.insert_pool)
         for item in current_pool:
@@ -117,12 +124,13 @@ class SQLiteEngine(object):
             query += "VALUES (" + (",".join(
                              list("?" for x in range(len(columns)))))+\
                              ")"
-            self.cursor.execute(query, column_values)
+            cursor.execute(query, column_values)
         self.pool_lock_activated = True
         self.insert_pool = list(value for value in current_pool
                                 if value not in self.insert_pool)
         self.pool_lock_activated = False
         self.pool_lock.release()
+        cursor.close()
         return True
 
 class Connection(object):
@@ -147,6 +155,11 @@ class Connection(object):
         Return self because execute is accessable through the class already.
         """
         return self
+    def close(self):
+        """
+        Close the database connection.
+        """
+        self.database.close()
 
 class GeneralException(Exception):
     """
