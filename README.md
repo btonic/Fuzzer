@@ -58,7 +58,7 @@ Now we can begin generating values. To begin, we can simply use the `.fuzz()` ge
 '\x00\x00\x00\x00\x02'
 '\x00\x00\x00\x00\x03'
 '\x00\x00\x00\x00\x04'
-#95 more values...
+#more values...
 ```
 
 However, notice how `result` in this example is not a `string`. Instead it is a `Result` instance. The result instance has the `.value` variable set to the generated string, and allows use of the `.success()` and `.fail()` functions to define the status of the attempt. These functions do not have to be used, but they provide access to `Fuzzer`'s database insertion queue.
@@ -69,11 +69,11 @@ If you decide to use `.success()` or `.fail()`, the attempt will automatically b
 Fuzzer.fuzz -> Result -> Result.success() or Result.fail() -> Result added to insertion pool -> Fuzzer.commit_to_database() -> Results inserted into database
 ```
 
-The following parameters can be altered in the `fuzz()` function for refinement of values returned.
+The following parameters can be altered for the `fuzz()` function for refinement of values returned.
 
-* `random_generation`
-* `prohibit`
-* `length`
-* `output_format`
-* `character_evaluator`
-* `maximum`
+* `random_generation` is set to either `True` or `False`. If this is true, then instead of sequential values being generated, the `random` module will be used to generate each character in the string returned.
+* `prohibit` is set to a list of characters you wish to disallow in the generated values. If you wish to allow everything, this is set to `None`.
+* `length` is the length of the string to be generated.
+* `output_format` is the format in which you want your results. This defaults to `"{fuzzed_string}"`, however this can be changed to any string as long as `{fuzzed_string}` is present in it. This string will have the generated string formatted into it using `.format(fuzzed_string=...)` so it is required that `{fuzzed_string}` is present somewhere inside of it.
+* `character_evaluator` is the function used to translate each integer value to a character. This function should recieve one value and return a string. The default function is `chr()`.
+* `maximum` is the maximum value that each index can reach. The default is `255`. If you change this to be higher than `255` with other default values, this will raise an error because `chr` can only translate to ASCII values.
