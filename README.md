@@ -1,9 +1,8 @@
 #Fuzzer
+Fuzzer is a simple to use Python package designed to make fuzz testing simple and fast.
 ##Build Status
 [![Build Status](https://travis-ci.org/ThatITNinja/Fuzzer.png?branch=master)](https://travis-ci.org/ThatITNinja/Fuzzer)
 ======
-Fuzzer is a simple to use Python package designed to make fuzz testing simple and fast.
-
 
 Installation
 ======
