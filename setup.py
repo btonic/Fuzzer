@@ -6,4 +6,6 @@ setup(name='Fuzzer',
       author='ThatITNinja',
       url='https://github.com/ThatITNinja/Fuzzer',
       packages=['fuzzer', 'fuzzer.sqliteengine'],
+
+      test_suite='test'
      )

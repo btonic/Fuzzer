@@ -1,3 +1,4 @@
 testing/*
 *.pyc
 env/*
+*.egg-info/
