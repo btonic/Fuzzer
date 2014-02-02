@@ -7,15 +7,19 @@ Fuzzer is a simple to use Python package designed to make fuzz testing simple an
 Installation
 ======
 To install Fuzzer, run:
+
 ```bash
 git clone git@github.com:ThatITNinja/Fuzzer.git
-python setup.py install```
+python setup.py install
+```
 
 
 Then to make sure that it is installed(and importable), run:
+
 ```python
 >>> import fuzzer
->>>```
+>>>
+```
 
 
 Usage
