@@ -1,4 +1,4 @@
-import unittest
+import unittest, os, sqlite3
 import fuzzer.sqliteengine as SQLEngine
 
 class TestSQLiteEngine(unittest.TestCase):
@@ -6,11 +6,14 @@ class TestSQLiteEngine(unittest.TestCase):
     Test the functions of the sqliteengine.
     """
     def setUp(self):
-        self.engine = SQLEngine.SQLiteEngine()
+        self.database_path = "test_fuzzer_db.db"
+        self.engine = SQLEngine.SQLiteEngine(self.database_path)
         self.testing_table_name = "testing_table"
+        self.db_connection = sqlite3.connect(self.database_path)
+        self.cursor = self.db_connection.cursor()
     def tearDown(self):
-        self.engine.stop()
-
+        self.db_connection.close()
+        os.remove("test_fuzzer_db.db")
     def test_create_database(self):
         """
         Test to make sure that a database is able to be created, and invalid
@@ -22,18 +25,16 @@ class TestSQLiteEngine(unittest.TestCase):
             msg="create_database should return true upon success."
         )
 
-        self.assertRaises(
-            SQLEngine.TableAlreadyExists,
+        with self.assertRaises(SQLEngine.TableAlreadyExists, msg=
+             "Duplicate databases passed without error."):
             self.engine.create_database(self.testing_table_name,
-                                       ("test_row", "INT")),
-            msg="Duplicate databases passed without error."
-        )
-
+                                       ("test_row", "INT"))
         self.assertTrue(
             len(
-                self.engine.cursor.execute(
-                    "SELECT name FROM sqlite_master WHERE type = 'table'\
-                    AND name = ?;", self.testing_table_name).fetchall()
+                self.cursor.execute(
+                    "SELECT name FROM sqlite_master\
+                     WHERE type = 'table'"
+                ).fetchall()
             ) == 1,
             msg="The table should be committed into the database."
         )
@@ -100,17 +101,15 @@ class TestSQLiteEngine(unittest.TestCase):
                 self.testing_table_name),
             msg="append_to_pool should return True on success."
         )
-        self.assertRaises(
-            SQLEngine.ItemKeyReserved,
+        with self.assertRaises(SQLEngine.ItemKeyReserved, msg=
+            "append_to_pool should raise an error, __table_name is in item."):
             self.engine.append_to_pool(
                 {
                  "test_row":20,
                  "__table_name":"error"
                 },
                 self.testing_table_name
-            ),
-            msg="append_to_pool should raise an error, __table_name is in item."
-        )
+            )
     def test_commit_to_pool(self):
         """
         Test to make sure all items in the pool are committed.
@@ -144,11 +143,15 @@ class TestConnection(unittest.TestCase):
     Test the connection used by the SQLiteEngine.
     """
     def setUp(self):
-        self.connection = SQLEngine.Connection(":memory:")
-        self.no_commit_connection = SQLEngine.Connection(":memory:")
+        self.database_path = "test_fuzzer_db.db"
+        self.connection = SQLEngine.Connection(self.database_path)
+        self.no_commit_connection = SQLEngine.Connection(
+                                    self.database_path,
+                                    commit_after_execute=False)
         self.testing_table_name = "test_table"
     def tearDown(self):
         self.connection.close()
+        os.remove("test_fuzzer_db.db")
     def test_execute(self):
         """
         Mak sure that the execution passthrough works as expected.
@@ -176,8 +179,8 @@ class TestConnection(unittest.TestCase):
         )
         self.assertTrue(
             len(
-                self.no_commit_connection.execute(
-                    "SELECT * FROM %s" %
+                self.connection.execute(
+                    "SELECT * FROM %s;" %
                     self.testing_table_name
                 ).fetchall()
             ) == 1,

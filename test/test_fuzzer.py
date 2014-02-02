@@ -1,11 +1,13 @@
 import fuzzer
-import unittest
+import unittest, sqlite3, os
 
 class TestFuzzer(unittest.TestCase):
     def setUp(self):
-    	self.fuzzer=fuzzer.Fuzzer()
+    	self.fuzzer=fuzzer.Fuzzer(database="test_fuzzer_db.db")
+        self.connection = sqlite3.connect("test_fuzzer_db.db")
     def tearDown(self):
-    	self.fuzzer.stop()
+        self.connection.close()
+        os.remove("test_fuzzer_db.db")
     def test_initialize(self):
         """
         Test to make sure that database is created for the fuzzer.
@@ -14,13 +16,13 @@ class TestFuzzer(unittest.TestCase):
             self.fuzzer.initialize()
         )
 
-        check_cursor = self.fuzzer.sql_engine.cursor
+        check_cursor = self.connection.cursor()
 
         self.assertTrue(
             len(
                 check_cursor.execute(
-                    "SELECT * from %s;" %
-                    self.fuzzer.table_name
+                    "SELECT name FROM sqlite_master\
+                     WHERE type='table';"
                 ).fetchall()
             ) == 1,
             msg="The table should be created for the fuzzer."
@@ -37,7 +39,7 @@ class TestFuzzer(unittest.TestCase):
                 break
             for character in result.value:
                 self.assertTrue(
-                    0 < ord(character) < 256,
+                    ord(character) in range(256),
                     msg="Default parameters should return ASCII characters."
                 )
 
@@ -65,7 +67,7 @@ class TestFuzzer(unittest.TestCase):
                 break
             for character in result.value:
                 self.assertTrue(
-                    0 < ord(character) < 256,
+                    ord(character) in range(256),
                     msg="A custom character_evaluator should work."
                 )
 
