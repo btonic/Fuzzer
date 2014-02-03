@@ -3,7 +3,7 @@ import unittest, sqlite3, os
 
 class TestFuzzer(unittest.TestCase):
     def setUp(self):
-    	self.fuzzer=fuzzer.Fuzzer(database="test_fuzzer_db.db")
+        self.fuzzer = fuzzer.Fuzzer(database="test_fuzzer_db.db")
         self.connection = sqlite3.connect("test_fuzzer_db.db")
     def tearDown(self):
         self.connection.close()
@@ -12,7 +12,7 @@ class TestFuzzer(unittest.TestCase):
         """
         Test to make sure that database is created for the fuzzer.
         """
-    	self.assertTrue(
+        self.assertTrue(
             self.fuzzer.initialize()
         )
 
@@ -31,7 +31,7 @@ class TestFuzzer(unittest.TestCase):
         """
         Test to make sure that the fuzzer works as expected (proper output).
         """
-    	self.fuzzer.initialize()
+        self.fuzzer.initialize()
 
 
         for number, result in enumerate(self.fuzzer.fuzz()):
@@ -80,6 +80,56 @@ class TestFuzzer(unittest.TestCase):
                     ord(character) in range(256),
                     msg="A custom character_evaluator should work."
                 )
+    def test_fuzz_random(self):
+        """
+        Test to make sure that generated characters are valid.
+        """
+        self.fuzzer.initialize()
+
+        for number, result in enumerate(
+                                  self.fuzzer.fuzz(
+                                       random_generation=True
+                                  )
+                              ):
+            if number >= 600:
+                break
+            for character in result.value:
+                self.assertTrue(
+                    ord(character) in range(256),
+                    msg="Random character should be in ASCII range."
+                )
+    def test_fuzz_random_prohibit(self):
+        """
+        Test to make sure that generated characters are not in the prohibited
+        list.
+        """
+        self.fuzzer.initialize()
+
+        prohibited = ["a", "b"]
+        for number, result in enumerate(
+                                  self.fuzzer.fuzz(
+                                       random_generation=True,
+                                       prohibit=prohibited
+                                  )
+                              ):
+            if number >= 600:
+                break
+            for character in result.value:
+                self.assertTrue(
+                    character not in prohibited,
+                    msg="Generated characters should not be in prohibited list."
+                )
+    def test_tail(self):
+        """
+        Test to make sure that tailng from the database works.
+        """
+        self.fuzzer.initialize()
+
+
+
+        for number, result in enumerate(
+                                  self.fuzzer.tail()
+                              )
 
 
 

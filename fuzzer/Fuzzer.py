@@ -145,7 +145,22 @@ class Fuzzer(object):
                 list(character_evaluator(value) for value in temp_list
                 ))
                 yield Result(self, attempt, prohibited=prohibit)
-
+    def tail(self, prohibit=None, length=5, used_for=None):
+        if prohibit != None:
+            if type(prohibit) != type(list()):
+                raise TypeError("prohibit must be a list.")
+            else:
+                for value in prohibit:
+                    if type(value) != type(str()):
+                        raise TypeError("Prohibited values must be a string")
+                    if len(value) != 1:
+                        raise ValueError(
+                                "Only characters are allowed to be prohibited."
+                              )
+        if used_for != None:
+            if type(used_for) != type(str()):
+                raise TypeError("used_for must be a string.")
+        
 
 
 
