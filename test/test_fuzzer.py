@@ -125,15 +125,100 @@ class TestFuzzer(unittest.TestCase):
         """
         self.fuzzer.initialize()
 
-
-
+        temp = []
         for number, result in enumerate(
-                                  self.fuzzer.tail()
-                              )
+                                  self.fuzzer.fuzz()
+                              ):
+            if number >= 600:
+                break
+            temp.append(result.value)
+            result.success()
+        self.fuzzer.commit_to_database()
 
+        for result in self.fuzzer.tail(self.fuzzer.table_name):
+            self.assertTrue(
+                result in temp,
+                msg="The result is invalid."
+            )
+    def test_tail_prohibited(self):
+        """
+        Test to make sure that tailing based on prohibited column works.
+        """
+        self.fuzzer.initialize()
+        temp = []
+        prohibited = ["a", "b"]
+        for number, result in enumerate(
+                                  self.fuzzer.fuzz()
+                              ):
+            if number >= 600:
+                break
+            temp.append(result.value)
+            result.success()
+        self.fuzzer.commit_to_database()
 
+        for result in self.fuzzer.tail(
+                           self.fuzzer.table_name,
+                           prohibit=prohibited
+                            ):
+            self.assertTrue(
+                result in temp,
+                msg="The result should be present."
+            )
 
+    def test_tail_used_for(self):
+        """
+        Test to make sure that tailing based on used_for column works.
+        """
+        self.fuzzer.initialize()
 
+        temp = []
+        used_for = "example"
+        for number, result in enumerate(
+                                  self.fuzzer.fuzz()
+                              ):
+            if number >= 600:
+                break
+            temp.append(result.value)
+            result.success(used_for="example")
+        self.fuzzer.commit_to_database()
+
+        for result in self.fuzzer.tail(
+                           self.fuzzer.table_name,
+                           used_for=used_for
+                            ):
+            self.assertTrue(
+                result in temp,
+                msg="The result should be present."
+            )
+
+    def test_tail_length(self):
+        """
+        Test to make sure that tailing based on length column works.
+        """
+        self.fuzzer.initialize()
+
+        temp = []
+        for number, result in enumerate(
+                                  self.fuzzer.fuzz()
+                              ):
+            if number >= 600:
+                break
+            temp.append(result.value)
+            result.success()
+        self.fuzzer.commit_to_database()
+
+        for result in self.fuzzer.tail(
+                           self.fuzzer.table_name,
+                           length=5
+                            ):
+            self.assertTrue(
+                result in temp,
+                msg="The result should be present."
+            )
+            self.assertTrue(
+                len(result) == 5,
+                msg="The result should be the proper length."
+            )
 
 
 if __name__ == '__main___':
