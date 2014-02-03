@@ -27,7 +27,7 @@ class TestFuzzer(unittest.TestCase):
             ) == 1,
             msg="The table should be created for the fuzzer."
         )
-    def test_fuzz(self):
+    def test_fuzz_default(self):
         """
         Test to make sure that the fuzzer works as expected (proper output).
         """
@@ -42,7 +42,12 @@ class TestFuzzer(unittest.TestCase):
                     ord(character) in range(256),
                     msg="Default parameters should return ASCII characters."
                 )
-
+    def test_fuzz_prohibited(self):
+        """
+        Test to make sure that no unwanted characters are included
+        in the value returned.
+        """
+        self.fuzzer.initialize()
         prohibited = ["a", "b"]
         for number, result in enumerate(
                                    self.fuzzer.fuzz(
@@ -54,8 +59,13 @@ class TestFuzzer(unittest.TestCase):
             for character in result.value:
                 self.assertTrue(
                     character not in prohibited,
-                    msg="A character in the result was not supposed to be present."
+                    msg="A prohibited character was in the result."
                 )
+    def test_fuzz_custom_evaluator(self):
+        """
+        Test to make sure that custom evaluators work as expected.
+        """
+        self.fuzzer.initialize()
         def testing_evaluator(value):
             return chr(value)
         for number, result in enumerate(
