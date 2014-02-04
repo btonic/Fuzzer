@@ -118,7 +118,10 @@ class SQLiteEngine(object):
                                        % item["__table_name"])
 
             columns = set(list(item.keys())) - set(["__table_name"])
-            column_values = list(item.get(value) for value in columns)
+            column_values = list(repr(item.get(value))
+                                 if type(value) == type(str())
+                                 else item.get(value)
+                                 for value in columns)
             query = "INSERT INTO %s" % item["__table_name"] + \
                     "(" + ",".join(columns) + ")"
             query += "VALUES (" + (",".join(
