@@ -1,8 +1,7 @@
 #Fuzzer
-Fuzzer is a simple to use Python package designed to make fuzz testing simple and fast.
-##Build Status
-[![Build Status](https://travis-ci.org/ThatITNinja/Fuzzer.png?branch=master)](https://travis-ci.org/ThatITNinja/Fuzzer)
-======
+Fuzzer is a Python package designed to make fuzz testing simple and fast.
+##Build Status [![Build Status](https://travis-ci.org/ThatITNinja/Fuzzer.png?branch=master)](https://travis-ci.org/ThatITNinja/Fuzzer)
+
 Installation
 ======
 To install Fuzzer, run:
@@ -35,7 +34,7 @@ Now you can begin using all that Fuzzer has to offer. Lets start off with creati
 >>> fuzz_instance = fuzzer.Fuzzer()
 ```
 
-We are then able to use the `.initialize()` function to actually create the database file (defaults to `fuzzerdb.db`), as well as the database table that Fuzzer will use for it's storage (optional, covered later).
+We can then use the `.initialize()` function to actually create the database file (defaults to `fuzzerdb.db`), as well as the database table that `Fuzzer` will use for it's storage (optional, covered later).
 
 If you assign the `database` parameter to another location, it will use that location. Likewise, if you assign the `table_name` parameter to another table, it will use that value.
 
@@ -43,7 +42,7 @@ If you assign the `database` parameter to another location, it will use that loc
 >>> fuzz_instance.initialize()
 ```
 
-Running this will create the database file `fuzzerdb.db` if it does not exist, as well as create the table `attempts(month -> [00-12])(day -> [00-31])(year -> [00-99])` if that does not exist already. If the database file exists, but the table does not, the table will be created. If the table does exist, then it will simply use that.
+Running this will create the database file specified in the initialization of the `Fuzzer` instance if it does not exist, as well as create the table if that does not exist already. If the database file exists, but the table does not, the table will be created. If the table does exist, then it will simply use that.
 
 Now we can begin generating values. To begin, we can simply use the `.fuzz()` generator supplied by `Fuzzer`. By default this will generate sequential strings of a length of 5. To generate the first 100 results, we can use:
 
@@ -61,7 +60,7 @@ Now we can begin generating values. To begin, we can simply use the `.fuzz()` ge
 #more values...
 ```
 
-However, notice how `result` in this example is not a `string`. Instead it is a `Result` instance. The result instance has the `.value` variable set to the generated string, and allows use of the `.success()` and `.fail()` functions to define the status of the attempt. These functions do not have to be used, but they provide access to `Fuzzer`'s database insertion queue.
+However, notice how `result` in this example is not a `string`. Instead it is a `Result` instance. The `Result` instance has the `.value` variable set to the generated string, and allows use of the `.success()` and `.fail()` functions to define the status of the attempt. These functions do not have to be used, but they provide access to `Fuzzer`'s database insertion queue.
 
 If you decide to use `.success()` or `.fail()`, the attempt will automatically be added to an insertion pool in the SQL backend engine, awaiting insertion into the database. In order to insert all values in the pool to the database, you must call `fuzz_instance.commit_to_datbaase()`. The flow is shown below:
 
@@ -69,7 +68,7 @@ If you decide to use `.success()` or `.fail()`, the attempt will automatically b
 Fuzzer.fuzz -> Result -> Result.success() or Result.fail() -> Result added to insertion pool -> Fuzzer.commit_to_database() -> Results inserted into database
 ```
 
-The following parameters can be altered for the `fuzz()` function for refinement of values returned.
+The following parameters can be passed to the `fuzz()` function for refinement of generated results.
 
 * `random_generation` is set to either `True` or `False`. If this is true, then instead of sequential values being generated, the `random` module will be used to generate each character in the string returned.
 * `prohibit` is set to a list of characters you wish to disallow in the generated values. If you wish to allow everything, this is set to `None`.
