@@ -55,7 +55,7 @@ class SQLiteEngine(object):
         """
         Search for a table name in the database.
         """
-        cursor = Connection(self.database_path)
+        cursor = Connection(self.database_path, commit_after_execute=False)
         query = "SELECT name FROM sqlite_master\
                  WHERE type = 'table' AND name = ?;"
         if len(cursor.execute(query, (table_name,)).fetchall()) == 1:
@@ -69,7 +69,7 @@ class SQLiteEngine(object):
         """
         Return the name of all tables in the database.
         """
-        cursor = Connection(self.database_path)
+        cursor = Connection(self.database_path, commit_after_execute=False)
         query = "SELECT name FROM sqlite_master \
                  WHERE type = 'table'"
         res = cursor.execute(query).fetchall()
