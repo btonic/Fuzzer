@@ -39,6 +39,14 @@ class SQLiteEngine(object):
         cursor.close()
         return True
 
+    def read_query(self, query, *args):
+        """
+        Execute and return results for a query.
+        """
+        cursor = Connection(self.database_path, commit_after_execute=False)
+        for result in cursor.execute(query, *args).fetchall():
+            yield result
+        cursor.close()
     def cache_tablenames(self):
         """
         Create an in-memory list of all table names.
