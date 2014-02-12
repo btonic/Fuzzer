@@ -1,5 +1,7 @@
 import fuzzer
-import unittest, sqlite3, os
+import unittest
+import sqlite3
+import os
 
 class TestFuzzer(unittest.TestCase):
     def setUp(self):

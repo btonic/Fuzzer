@@ -91,7 +91,7 @@ class SQLiteEngine(object):
         Value  =>    dictionary value
         tablename => added explicitly.
         """
-        if type(item) != type(dict()):
+        if not isinstance(item, dict):
             raise TypeError("`item` must be type: `dict`.")
         new_item = item.copy()
         if new_item.get("__table_name") != None:
@@ -127,7 +127,7 @@ class SQLiteEngine(object):
 
             columns = set(list(item.keys())) - set(["__table_name"])
             column_values = list(repr(item.get(value))
-                                 if type(value) == type(str())
+                                 if isinstance(value, str)
                                  else item.get(value)
                                  for value in columns)
             query = "INSERT INTO %s" % item["__table_name"] + \

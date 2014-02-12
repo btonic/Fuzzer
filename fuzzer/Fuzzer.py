@@ -35,7 +35,7 @@ class Fuzzer(object):
         Trigger SQL engine to commit all values awaiting insertion.
         """
         self.sql_engine.commit_pool()
-    def _increment(self, values, index, maximum=255, reset=True, 
+    def _increment(self, values, index, maximum=255, reset=True,
                   _called_from_func=False):
         """
         Handles incrementation for fuzzer.
@@ -71,22 +71,22 @@ class Fuzzer(object):
             raise TooHighForChr("`maximum` is too large for chr,\
                                  must be between 0 and 255.")
         if prohibit != None:
-            if type(prohibit) != type(list()):
+            if not isinstance(prohibit, list):
                 raise TypeError("`prohibit` must be a list.")
             else:
                 for value in prohibit:
-                    if type(value) != type(str()):
+                    if not isinstance(value, str):
                         raise TypeError("Values in prohibit must be a string.")
                     else:
                         if len(value) > 1:
                             raise ValueError("Values in prohibit must only be\
                                               one character long.")
-        if type(output_format) != type(str()):
+        if not isinstance(output_format, str):
             raise TypeError("output_format should be a string.")
-        if type(random_generation) != type(bool()):
+        if not isinstance(random_generation, bool):
             raise TypeError("random_generation should be a bool.")
 
-        if random_generation == False and prohibit == None:
+        if (not random_generation) and (prohibit == None):
             done = False
             temp_list = [0]*length
             while not done:
@@ -98,7 +98,7 @@ class Fuzzer(object):
                     self._increment(temp_list, length - 1, maximum=maximum)
                 except MaximumIncrementReached:
                     done = True
-        if (random_generation == False) and (prohibit != None):
+        if (not random_generation) and (prohibit != None):
             done = False
             pass_attempt = False
             temp_list = [0]*length
@@ -122,14 +122,14 @@ class Fuzzer(object):
                         self._increment(temp_list, 0, maximum=maximum)
                     except MaximumIncrementReached:
                         done = True
-        if (random_generation == True) and (prohibit == None):
+        if (random_generation) and (prohibit == None):
             while True:
                 attempt = output_format.format(fuzzed_string="".join(
                 list(character_evaluator(random.randrange(0, maximum))
                      for index in range(length))
                 ))
                 yield Result(self, attempt, prohibited=prohibit)
-        if (random_generation == True) and (prohibit != None):
+        if (random_generation) and (prohibit != None):
             while True:
                 temp_list = [0]*length
                 for index in range(length):
@@ -147,18 +147,18 @@ class Fuzzer(object):
                 yield Result(self, attempt, prohibited=prohibit)
     def tail(self, table_name, prohibit=None, length=5, used_for=None):
         if prohibit != None:
-            if type(prohibit) != type(list()):
+            if not isinstance(prohibit, list):
                 raise TypeError("prohibit must be a list.")
             else:
                 for value in prohibit:
-                    if type(value) != type(str()):
+                    if not isinstance(value, str):
                         raise TypeError("Prohibited values must be a string")
                     if len(value) != 1:
                         raise ValueError(
                                 "Only characters are allowed to be prohibited."
                               )
         if used_for != None:
-            if type(used_for) != type(str()):
+            if not isinstance(used_for, str):
                 raise TypeError("used_for must be a string.")
         
 
