@@ -137,8 +137,8 @@ class SQLiteEngine(object):
                              ")"
             cursor.execute(query, column_values)
         self.pool_lock_activated = True
-        self.insert_pool = list(value for value in current_pool
-                                if value not in self.insert_pool)
+        self.insert_pool = list(value for value in self.insert_pool
+                                if value not in current_pool)
         self.pool_lock_activated = False
         self.pool_lock.release()
         cursor.close()
