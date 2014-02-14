@@ -1,5 +1,7 @@
+from types import NoneType
 import fuzzer.sqliteengine as SQLEngine
-import random, datetime
+import random
+import datetime
 
 class Fuzzer(object):
     """
@@ -145,22 +147,85 @@ class Fuzzer(object):
                 list(character_evaluator(value) for value in temp_list
                 ))
                 yield Result(self, attempt, prohibited=prohibit)
-    def tail(self, table_name, prohibit=None, length=5, used_for=None):
-        if prohibit != None:
-            if not isinstance(prohibit, list):
-                raise TypeError("prohibit must be a list.")
+    def tail(self, table_name, select_conditions={},
+             order_by="created_at ASC"):
+
+        if not isinstance(select_conditions, dict):
+            raise TypeError("select_conditions must be a dict.")
+        query = "SELECT * FROM {table_name} WHERE".format(
+                    table_name=table_name
+                )
+        first_iteration = True
+        for keyword, condition in select_conditions.iteritems():
+            if not isinstance(condition, NoneType)\
+               and not isinstance(keyword, NoneType)\
+               and not keyword == "":
+                if first_iteration:
+                    query += " {keyword} = {condition}".format(
+                            keyword=keyword,
+                            condition=repr(condition)\
+                                      if isinstance(condition, str)\
+                                      else condition
+                        )
+                    first_iteration = False
+                else:
+                    query += " AND {keyword} = {condition}".format(
+                            keyword=keyword,
+                            condition=repr(condition)\
+                                      if isinstance(condition, str)\
+                                      else condition
+                        )
+        if not isinstance(order_by, str):
+            raise TypeError("order_by must be a string.")
+
+        order_set = False
+        if order_by == "":
+            #end of query
+            query += ";"
+        else:
+            #ordering of query
+            order_set = True
+            query_without_order = query
+            query += " ORDER BY {order_by};".format(
+                    order_by=order_by
+                )
+
+        first_result = None
+        last_result = None
+        tail_from_created = False
+        while True:
+            #after all values have been iterated currently in database,
+            #this waits and watches the DB for any new rows added.
+            if tail_from_created:
+                if order_set:
+                    #override the order, pull by when it was created to
+                    #grab latest generation
+                    query = query_without_order + " ORDER BY created_at DESC LIMIT 1;"
+                else:
+                    #add our order to the query, there isnt one already
+                    query = query.rstrip(";") + " ORDER BY created_at DESC LIMIT 1;"
+                while True:
+                    #convert out of a generator and pull the result. Limited to 1
+                    result = list(self.sql_engine.read_query(query))[0]
+                    if isinstance(last_result, NoneType):
+                        last_result = result
+                    else:
+                        if last_result == result:
+                            pass
+                        else:
+                            last_result = result
+                            yield Result(self, result[1], prohibited=result[2])
             else:
-                for value in prohibit:
-                    if not isinstance(value, str):
-                        raise TypeError("Prohibited values must be a string")
-                    if len(value) != 1:
-                        raise ValueError(
-                                "Only characters are allowed to be prohibited."
-                              )
-        if used_for != None:
-            if not isinstance(used_for, str):
-                raise TypeError("used_for must be a string.")
-        
+                for index, result in enumerate(self.sql_engine.read_query(query)):
+                    if index == 0:
+                        if isinstance(first_result, NoneType):
+                            first_result = result
+                        else:
+                            if result == first_result:
+                                tail_from_created = True
+                                last_result = result
+                                break
+                    yield Result(self, result[1], prohibited=result[2])
 
 
 
@@ -194,7 +259,7 @@ class Result(object):
         """
         return {"created_at": datetime.datetime.now().strftime("%c"),
                 "updated_at": datetime.datetime.now().strftime("%c"),
-                "prohibited": "" if self.prohibited == None \
+                "prohibited": "" if isinstance(self.prohibited, NoneType) \
                                  else self.prohibited,
                 "attempted" : self.value,
                 "successful": success_value}
