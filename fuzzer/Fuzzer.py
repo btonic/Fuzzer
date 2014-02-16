@@ -1,5 +1,5 @@
 from types import NoneType
-import fuzzer.sqliteengine as SQLEngine
+import fuzzer.sqlengines.sqliteengine as SQLiteEngine
 import random
 import datetime
 
@@ -9,11 +9,12 @@ class Fuzzer(object):
     and catch up or tail an already running fuzzer.
     """
     def __init__(self, database="fuzzerdb.db", cache_tablenames=True,
+                 sql_engine=SQLiteEngine,
                  table_name=datetime.datetime.today().strftime(
                                                      "attempts%m%d%y")):
-
-        self.sql_engine = SQLEngine.SQLiteEngine(database,
-                          tables_to_cache=cache_tablenames)
+        self.sql_engine_module = sql_engine
+        self.sql_engine = sql_engine.SQLEngine(database,
+                                               tables_to_cache=cache_tablenames)
         self.table_name = table_name
     def initialize(self):
         """
@@ -29,7 +30,7 @@ class Fuzzer(object):
                            ("created_at", "TEXT"),
                            ("updated_at", "TEXT")
                            )
-        except SQLEngine.TableAlreadyExists:
+        except self.sql_engine_module.TableAlreadyExists:
             pass
         return True
     def commit_to_database(self):

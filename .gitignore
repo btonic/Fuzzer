@@ -2,3 +2,4 @@ testing/*
 *.pyc
 env/*
 *.egg-info/
+*.db

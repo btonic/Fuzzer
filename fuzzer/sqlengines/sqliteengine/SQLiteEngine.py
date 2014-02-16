@@ -1,7 +1,7 @@
 import sqlite3
 from threading import Lock
 
-class SQLiteEngine(object):
+class SQLEngine(object):
     """
     SQL engine backend for multithreaded use. Allows for in-memory storage to
     mass-commit.

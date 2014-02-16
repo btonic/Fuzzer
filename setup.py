@@ -5,7 +5,7 @@ setup(name='Fuzzer',
       description='A pure Python fuzz testing package.',
       author='ThatITNinja',
       url='https://github.com/ThatITNinja/Fuzzer',
-      packages=['fuzzer', 'fuzzer.sqliteengine'],
+      packages=['fuzzer', 'fuzzer.sqlengines'],
 
       test_suite='test'
      )

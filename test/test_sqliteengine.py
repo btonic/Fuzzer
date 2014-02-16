@@ -1,13 +1,13 @@
 import unittest, os, sqlite3
-import fuzzer.sqliteengine as SQLEngine
+import fuzzer.sqlengines.sqliteengine as SQLEngine
 
-class TestSQLiteEngine(unittest.TestCase):
+class TestSQLEngine(unittest.TestCase):
     """
     Test the functions of the sqliteengine.
     """
     def setUp(self):
         self.database_path = "test_fuzzer_db.db"
-        self.engine = SQLEngine.SQLiteEngine(self.database_path)
+        self.engine = SQLEngine.SQLEngine(self.database_path)
         self.testing_table_name = "testing_table"
         self.db_connection = sqlite3.connect(self.database_path)
         self.cursor = self.db_connection.cursor()
@@ -160,7 +160,7 @@ class TestSQLiteEngine(unittest.TestCase):
 
 class TestConnection(unittest.TestCase):
     """
-    Test the connection used by the SQLiteEngine.
+    Test the connection used by the SQLEngine.
     """
     def setUp(self):
         self.database_path = "test_fuzzer_db.db"
