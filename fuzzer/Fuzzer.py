@@ -152,16 +152,20 @@ class Fuzzer(object):
 
         if not isinstance(select_conditions, dict):
             raise TypeError("select_conditions must be a dict.")
-        query = "SELECT * FROM {table_name} WHERE".format(
+        if not isinstance(order_by, str):
+            raise TypeError("order_by must be a string.")
+
+        query = "SELECT * FROM {table_name}".format(
                     table_name=table_name
                 )
+
         first_iteration = True
         for keyword, condition in select_conditions.iteritems():
             if not isinstance(condition, NoneType)\
                and not isinstance(keyword, NoneType)\
                and not keyword == "":
                 if first_iteration:
-                    query += " {keyword} = {condition}".format(
+                    query += "WHERE {keyword} = {condition}".format(
                             keyword=keyword,
                             condition=repr(condition)\
                                       if isinstance(condition, str)\
@@ -175,8 +179,6 @@ class Fuzzer(object):
                                       if isinstance(condition, str)\
                                       else condition
                         )
-        if not isinstance(order_by, str):
-            raise TypeError("order_by must be a string.")
 
         order_set = False
         if order_by == "":
@@ -192,18 +194,18 @@ class Fuzzer(object):
 
         first_result = None
         last_result = None
-        tail_from_created = False
+        tail_from_id = False
         while True:
             #after all values have been iterated currently in database,
             #this waits and watches the DB for any new rows added.
-            if tail_from_created:
+            if tail_from_id:
                 if order_set:
-                    #override the order, pull by when it was created to
-                    #grab latest generation
-                    query = query_without_order + " ORDER BY created_at DESC LIMIT 1;"
+                    #override the order, order by when it was created to
+                    #grab latest entry
+                    query = query_without_order + " ORDER BY attempt_id DESC LIMIT 1;"
                 else:
                     #add our order to the query, there isnt one already
-                    query = query.rstrip(";") + " ORDER BY created_at DESC LIMIT 1;"
+                    query = query.rstrip(";") + " ORDER BY attempt_id DESC LIMIT 1;"
                 while True:
                     #convert out of a generator and pull the result. Limited to 1
                     result = list(self.sql_engine.read_query(query))[0]
@@ -219,10 +221,11 @@ class Fuzzer(object):
                 for index, result in enumerate(self.sql_engine.read_query(query)):
                     if index == 0:
                         if isinstance(first_result, NoneType):
+                            print "first_result"
                             first_result = result
                         else:
                             if result == first_result:
-                                tail_from_created = True
+                                tail_from_id = True
                                 last_result = result
                                 break
                     yield Result(self, result[1], prohibited=result[2])

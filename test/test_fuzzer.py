@@ -121,6 +121,7 @@ class TestFuzzer(unittest.TestCase):
                     character not in prohibited,
                     msg="Generated characters should not be in prohibited list."
                 )
+    @unittest.skip("TO BE DEPRECATED. DOES NOT MATCH FINAL DESIGN.")
     def test_tail(self):
         """
         Test to make sure that tailng from the database works.
@@ -142,6 +143,7 @@ class TestFuzzer(unittest.TestCase):
                 result in temp,
                 msg="The result is invalid."
             )
+    @unittest.skip("TO BE DEPRECATED. DOES NOT MATCH FINAL DESIGN.")
     def test_tail_prohibited(self):
         """
         Test to make sure that tailing based on prohibited column works.
@@ -166,7 +168,7 @@ class TestFuzzer(unittest.TestCase):
                 result in temp,
                 msg="The result should be present."
             )
-
+    @unittest.skip("TO BE DEPRECATED. DOES NOT MATCH FINAL DESIGN.")
     def test_tail_used_for(self):
         """
         Test to make sure that tailing based on used_for column works.
@@ -192,7 +194,7 @@ class TestFuzzer(unittest.TestCase):
                 result in temp,
                 msg="The result should be present."
             )
-
+    @unittest.skip("TO BE DEPRECATED. DOES NOT MATCH FINAL DESIGN.")
     def test_tail_length(self):
         """
         Test to make sure that tailing based on length column works.
