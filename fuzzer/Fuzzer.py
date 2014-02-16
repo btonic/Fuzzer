@@ -61,9 +61,9 @@ class Fuzzer(object):
                 values[index] = values[index] + 1
                 return
 
-    def fuzz(self, random_generation=False, prohibit=None,
-                   length=5, output_format="{fuzzed_string}",
-                   character_evaluator=chr, maximum=255):
+    def sequential_fuzz(self, prohibit=None, length=5, 
+                        output_format="{fuzzed_string}",
+                        character_evaluator=chr, maximum=255):
         """
         Generates all possibilities with a given length. If random is passed,
         it will generate random values with a given length in a range between
@@ -86,10 +86,8 @@ class Fuzzer(object):
                                               one character long.")
         if not isinstance(output_format, str):
             raise TypeError("output_format should be a string.")
-        if not isinstance(random_generation, bool):
-            raise TypeError("random_generation should be a bool.")
 
-        if (not random_generation) and (prohibit == None):
+        if prohibit == None:
             done = False
             temp_list = [0]*length
             while not done:
@@ -101,7 +99,7 @@ class Fuzzer(object):
                     self._increment(temp_list, length - 1, maximum=maximum)
                 except MaximumIncrementReached:
                     done = True
-        if (not random_generation) and (prohibit != None):
+        if prohibit != None:
             done = False
             pass_attempt = False
             temp_list = [0]*length
@@ -125,14 +123,34 @@ class Fuzzer(object):
                         self._increment(temp_list, 0, maximum=maximum)
                     except MaximumIncrementReached:
                         done = True
-        if (random_generation) and (prohibit == None):
+    def random_fuzz(self, prohibit=None, character_evaluator=chr,
+                    output_format="{fuzzed_string}", length=5,
+                    maximum=255):
+        if maximum > 255 and character_evaluator == chr:
+            raise TooHighForChr("`maximum` is too large for chr,\
+                                 must be between 0 and 255.")
+        if prohibit != None:
+            if not isinstance(prohibit, list):
+                raise TypeError("`prohibit` must be a list.")
+            else:
+                for value in prohibit:
+                    if not isinstance(value, str):
+                        raise TypeError("Values in prohibit must be a string.")
+                    else:
+                        if len(value) > 1:
+                            raise ValueError("Values in prohibit must only be\
+                                              one character long.")
+        if not isinstance(output_format, str):
+            raise TypeError("output_format should be a string.")
+
+        if prohibit == None:
             while True:
                 attempt = output_format.format(fuzzed_string="".join(
                 list(character_evaluator(random.randrange(0, maximum))
                      for index in range(length))
                 ))
                 yield Result(self, attempt, prohibited=prohibit)
-        if (random_generation) and (prohibit != None):
+        if prohibit != None:
             while True:
                 temp_list = [0]*length
                 for index in range(length):
