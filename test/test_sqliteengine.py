@@ -26,7 +26,7 @@ class TestSQLiteEngine(unittest.TestCase):
         )
 
         with self.assertRaises(SQLEngine.TableAlreadyExists, msg=
-             "Duplicate databases passed without error."):
+             "Duplicate tables passed without error."):
             self.engine.create_database(self.testing_table_name,
                                        ("test_row", "INT"))
         self.assertTrue(
@@ -45,7 +45,7 @@ class TestSQLiteEngine(unittest.TestCase):
         """
         self.assertFalse(
             self.engine.table_exists(self.testing_table_name),
-            msg=""
+            msg="Table should not be in the database."
         )
 
         self.engine.create_database(self.testing_table_name,
@@ -137,6 +137,26 @@ class TestSQLiteEngine(unittest.TestCase):
             len(self.engine.insert_pool) == 0,
             msg="There should be no elements in the insert pool after commit."
         )
+    def test_read_query(self):
+        """
+        Test to make sure that a read-only query works as expected.
+        """
+        self.engine.create_database(self.testing_table_name,
+                                   ("test_row", "INT"))
+        self.engine.append_to_pool(
+            {"test_row":20},
+            self.testing_table_name
+        )
+        self.engine.commit_pool()
+
+        result = list(self.engine.read_query("SELECT * FROM %s" %
+                                             self.testing_table_name))
+        self.assertTrue(
+            len(result) == 1,
+            msg="There should be one result returned."
+        )
+
+
 
 class TestConnection(unittest.TestCase):
     """

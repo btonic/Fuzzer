@@ -39,6 +39,14 @@ class SQLiteEngine(object):
         cursor.close()
         return True
 
+    def read_query(self, query, *args):
+        """
+        Execute and return results for a query.
+        """
+        cursor = Connection(self.database_path, commit_after_execute=False)
+        for result in cursor.execute(query, *args).fetchall():
+            yield result
+        cursor.close()
     def cache_tablenames(self):
         """
         Create an in-memory list of all table names.
@@ -55,7 +63,7 @@ class SQLiteEngine(object):
         """
         Search for a table name in the database.
         """
-        cursor = Connection(self.database_path)
+        cursor = Connection(self.database_path, commit_after_execute=False)
         query = "SELECT name FROM sqlite_master\
                  WHERE type = 'table' AND name = ?;"
         if len(cursor.execute(query, (table_name,)).fetchall()) == 1:
@@ -69,7 +77,7 @@ class SQLiteEngine(object):
         """
         Return the name of all tables in the database.
         """
-        cursor = Connection(self.database_path)
+        cursor = Connection(self.database_path, commit_after_execute=False)
         query = "SELECT name FROM sqlite_master \
                  WHERE type = 'table'"
         res = cursor.execute(query).fetchall()
@@ -83,7 +91,7 @@ class SQLiteEngine(object):
         Value  =>    dictionary value
         tablename => added explicitly.
         """
-        if type(item) != type(dict()):
+        if not isinstance(item, dict):
             raise TypeError("`item` must be type: `dict`.")
         new_item = item.copy()
         if new_item.get("__table_name") != None:
@@ -119,7 +127,7 @@ class SQLiteEngine(object):
 
             columns = set(list(item.keys())) - set(["__table_name"])
             column_values = list(repr(item.get(value))
-                                 if type(value) == type(str())
+                                 if isinstance(value, str)
                                  else item.get(value)
                                  for value in columns)
             query = "INSERT INTO %s" % item["__table_name"] + \
@@ -129,8 +137,8 @@ class SQLiteEngine(object):
                              ")"
             cursor.execute(query, column_values)
         self.pool_lock_activated = True
-        self.insert_pool = list(value for value in current_pool
-                                if value not in self.insert_pool)
+        self.insert_pool = list(value for value in self.insert_pool
+                                if value not in current_pool)
         self.pool_lock_activated = False
         self.pool_lock.release()
         cursor.close()

@@ -1,5 +1,7 @@
+from types import NoneType
 import fuzzer.sqliteengine as SQLEngine
-import random, datetime
+import random
+import datetime
 
 class Fuzzer(object):
     """
@@ -35,7 +37,7 @@ class Fuzzer(object):
         Trigger SQL engine to commit all values awaiting insertion.
         """
         self.sql_engine.commit_pool()
-    def _increment(self, values, index, maximum=255, reset=True, 
+    def _increment(self, values, index, maximum=255, reset=True,
                   _called_from_func=False):
         """
         Handles incrementation for fuzzer.
@@ -71,22 +73,22 @@ class Fuzzer(object):
             raise TooHighForChr("`maximum` is too large for chr,\
                                  must be between 0 and 255.")
         if prohibit != None:
-            if type(prohibit) != type(list()):
+            if not isinstance(prohibit, list):
                 raise TypeError("`prohibit` must be a list.")
             else:
                 for value in prohibit:
-                    if type(value) != type(str()):
+                    if not isinstance(value, str):
                         raise TypeError("Values in prohibit must be a string.")
                     else:
                         if len(value) > 1:
                             raise ValueError("Values in prohibit must only be\
                                               one character long.")
-        if type(output_format) != type(str()):
+        if not isinstance(output_format, str):
             raise TypeError("output_format should be a string.")
-        if type(random_generation) != type(bool()):
+        if not isinstance(random_generation, bool):
             raise TypeError("random_generation should be a bool.")
 
-        if random_generation == False and prohibit == None:
+        if (not random_generation) and (prohibit == None):
             done = False
             temp_list = [0]*length
             while not done:
@@ -98,7 +100,7 @@ class Fuzzer(object):
                     self._increment(temp_list, length - 1, maximum=maximum)
                 except MaximumIncrementReached:
                     done = True
-        if (random_generation == False) and (prohibit != None):
+        if (not random_generation) and (prohibit != None):
             done = False
             pass_attempt = False
             temp_list = [0]*length
@@ -122,14 +124,14 @@ class Fuzzer(object):
                         self._increment(temp_list, 0, maximum=maximum)
                     except MaximumIncrementReached:
                         done = True
-        if (random_generation == True) and (prohibit == None):
+        if (random_generation) and (prohibit == None):
             while True:
                 attempt = output_format.format(fuzzed_string="".join(
                 list(character_evaluator(random.randrange(0, maximum))
                      for index in range(length))
                 ))
                 yield Result(self, attempt, prohibited=prohibit)
-        if (random_generation == True) and (prohibit != None):
+        if (random_generation) and (prohibit != None):
             while True:
                 temp_list = [0]*length
                 for index in range(length):
@@ -145,7 +147,88 @@ class Fuzzer(object):
                 list(character_evaluator(value) for value in temp_list
                 ))
                 yield Result(self, attempt, prohibited=prohibit)
+    def tail(self, table_name, select_conditions={},
+             order_by="created_at ASC"):
 
+        if not isinstance(select_conditions, dict):
+            raise TypeError("select_conditions must be a dict.")
+        if not isinstance(order_by, str):
+            raise TypeError("order_by must be a string.")
+
+        query = "SELECT * FROM {table_name}".format(
+                    table_name=table_name
+                )
+
+        first_iteration = True
+        for keyword, condition in select_conditions.iteritems():
+            if not isinstance(condition, NoneType)\
+               and not isinstance(keyword, NoneType)\
+               and not keyword == "":
+                if first_iteration:
+                    query += "WHERE {keyword} = {condition}".format(
+                            keyword=keyword,
+                            condition=repr(condition)\
+                                      if isinstance(condition, str)\
+                                      else condition
+                        )
+                    first_iteration = False
+                else:
+                    query += " AND {keyword} = {condition}".format(
+                            keyword=keyword,
+                            condition=repr(condition)\
+                                      if isinstance(condition, str)\
+                                      else condition
+                        )
+
+        order_set = False
+        if order_by == "":
+            #end of query
+            query += ";"
+        else:
+            #ordering of query
+            order_set = True
+            query_without_order = query
+            query += " ORDER BY {order_by};".format(
+                    order_by=order_by
+                )
+
+        first_result = None
+        last_result = None
+        tail_from_id = False
+        while True:
+            #after all values have been iterated currently in database,
+            #this waits and watches the DB for any new rows added.
+            if tail_from_id:
+                if order_set:
+                    #override the order, order by when it was created to
+                    #grab latest entry
+                    query = query_without_order + " ORDER BY attempt_id DESC LIMIT 1;"
+                else:
+                    #add our order to the query, there isnt one already
+                    query = query.rstrip(";") + " ORDER BY attempt_id DESC LIMIT 1;"
+                while True:
+                    #convert out of a generator and pull the result. Limited to 1
+                    result = list(self.sql_engine.read_query(query))[0]
+                    if isinstance(last_result, NoneType):
+                        last_result = result
+                    else:
+                        if last_result == result:
+                            pass
+                        else:
+                            last_result = result
+                            yield Result(self, result[1], prohibited=result[2])
+            else:
+                for index, result in enumerate(self.sql_engine.read_query(query)):
+                    if index == 0:
+                        if isinstance(first_result, NoneType):
+                            print "first_result"
+                            first_result = result
+                        else:
+                            if result == first_result:
+                                tail_from_id = True
+                                last_result = result
+                                break
+                    yield Result(self, result[1], prohibited=result[2])
 
 
 
@@ -179,7 +262,7 @@ class Result(object):
         """
         return {"created_at": datetime.datetime.now().strftime("%c"),
                 "updated_at": datetime.datetime.now().strftime("%c"),
-                "prohibited": "" if self.prohibited == None \
+                "prohibited": "" if isinstance(self.prohibited, NoneType) \
                                  else self.prohibited,
                 "attempted" : self.value,
                 "successful": success_value}
