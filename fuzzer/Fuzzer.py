@@ -38,8 +38,9 @@ class Fuzzer(object):
         Trigger SQL engine to commit all values awaiting insertion.
         """
         self.sql_engine.commit_pool()
-    def _increment(self, values, index, maximum=255, reset=True,
-                  _called_from_func=False):
+    def _increment(self, values, index, minimum=0,
+                   maximum=255, reset=True,
+                   _called_from_func=False):
         """
         Handles incrementation for fuzzer.
         """
@@ -49,7 +50,7 @@ class Fuzzer(object):
                     raise MaximumIncrementReached(
                           "Incrementation limit reached")
                 if reset:
-                    values[index] = 0
+                    values[index] = minimum
                 try:
                     self._increment(values, index - 1,
                                    maximum=maximum, reset=reset,
@@ -63,13 +64,20 @@ class Fuzzer(object):
 
     def sequential_fuzz(self, prohibit=None, length=5, 
                         output_format="{fuzzed_string}",
-                        character_evaluator=chr, maximum=255):
+                        character_evaluator=chr,
+                        minimum=0, maximum=255):
         """
         Generates all possibilities with a given length. If random is passed,
         it will generate random values with a given length in a range between
         0 and `maximum`. The character_evaluator will be used to convert the
         number into its character form.
         """
+        if not isinstance(minimum, int):
+            raise TypeError("`minimum` must be an integer.")
+        if not isinstance(maximum, int):
+            raise TypeError("`maximum` must be an integer.")
+        if minimum > maximum:
+            raise ValueError("`minimum` must be less than `maximum`")
         if maximum > 255 and character_evaluator == chr:
             raise TooHighForChr("`maximum` is too large for chr,\
                                  must be between 0 and 255.")
@@ -89,20 +97,21 @@ class Fuzzer(object):
 
         if prohibit == None:
             done = False
-            temp_list = [0]*length
+            temp_list = [minimum]*length
             while not done:
                 attempt = output_format.format(fuzzed_string="".join(
                 list(character_evaluator(character) for character in temp_list))
                 )
                 yield Result(self, attempt, prohibited=prohibit)
                 try:
-                    self._increment(temp_list, length - 1, maximum=maximum)
+                    self._increment(temp_list, length - 1,
+                                    minimum=minimum, maximum=maximum)
                 except MaximumIncrementReached:
                     done = True
         if prohibit != None:
             done = False
             pass_attempt = False
-            temp_list = [0]*length
+            temp_list = [minimum]*length
             while not done:
                 attempt = output_format.format(fuzzed_string="".join(
                 list(character_evaluator(character) for character in temp_list))
@@ -113,19 +122,27 @@ class Fuzzer(object):
                 if pass_attempt:
                     pass_attempt = False
                     try:
-                        self._increment(temp_list, 0, maximum=maximum)
+                        self._increment(temp_list, length - 1,
+                                        minimum=minimum, maximum=maximum)
                     except MaximumIncrementReached:
                         done = True
                     continue
                 else:
                     yield Result(self, attempt, prohibited=prohibit)
                     try:
-                        self._increment(temp_list, 0, maximum=maximum)
+                        self._increment(temp_list, length - 1,
+                                        minimum=minimum, maximum=maximum)
                     except MaximumIncrementReached:
                         done = True
     def random_fuzz(self, prohibit=None, character_evaluator=chr,
                     output_format="{fuzzed_string}", length=5,
-                    maximum=255):
+                    minimum=0, maximum=255):
+        if not isinstance(minimum, int):
+            raise TypeError("`minimum` must be an integer.")
+        if not isinstance(maximum, int):
+            raise TypeError("`maximum` must be an integer.")
+        if minimum > maximum:
+            raise ValueError("`minimum` must be less than `maximum`.")
         if maximum > 255 and character_evaluator == chr:
             raise TooHighForChr("`maximum` is too large for chr,\
                                  must be between 0 and 255.")
@@ -146,17 +163,17 @@ class Fuzzer(object):
         if prohibit == None:
             while True:
                 attempt = output_format.format(fuzzed_string="".join(
-                list(character_evaluator(random.randrange(0, maximum))
+                list(character_evaluator(random.randrange(minimum, maximum))
                      for index in range(length))
                 ))
                 yield Result(self, attempt, prohibited=prohibit)
         if prohibit != None:
             while True:
-                temp_list = [0]*length
+                temp_list = [minimum]*length
                 for index in range(length):
                     done = False
                     while not done:
-                        char_value_attempt = random.randrange(0, maximum)
+                        char_value_attempt = random.randrange(minimum, maximum)
                         if character_evaluator(char_value_attempt) in prohibit:
                             continue
                         else:

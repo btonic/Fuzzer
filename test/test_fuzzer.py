@@ -29,14 +29,14 @@ class TestFuzzer(unittest.TestCase):
             ) == 1,
             msg="The table should be created for the fuzzer."
         )
-    def test_fuzz_default(self):
+    def test_sequential_fuzz_default(self):
         """
         Test to make sure that the fuzzer works as expected (proper output).
         """
         self.fuzzer.initialize()
 
 
-        for number, result in enumerate(self.fuzzer.fuzz()):
+        for number, result in enumerate(self.fuzzer.sequential_fuzz()):
             if number >= 600:
                 break
             for character in result.value:
@@ -44,7 +44,7 @@ class TestFuzzer(unittest.TestCase):
                     ord(character) in range(256),
                     msg="Default parameters should return ASCII characters."
                 )
-    def test_fuzz_prohibited(self):
+    def test_sequential_fuzz_prohibited(self):
         """
         Test to make sure that no unwanted characters are included
         in the value returned.
@@ -52,7 +52,7 @@ class TestFuzzer(unittest.TestCase):
         self.fuzzer.initialize()
         prohibited = ["a", "b"]
         for number, result in enumerate(
-                                   self.fuzzer.fuzz(
+                                   self.fuzzer.sequential_fuzz(
                                         prohibit=prohibited
                                    )
                               ):
@@ -63,7 +63,39 @@ class TestFuzzer(unittest.TestCase):
                     character not in prohibited,
                     msg="A prohibited character was in the result."
                 )
-    def test_fuzz_custom_evaluator(self):
+    def test_sequential_fuzz_format(self):
+        """
+        Test to make sure that the output is in the required format.
+        """
+        self.fuzzer.initialize()
+        for index, result in enumerate(
+                                  self.fuzzer.sequential_fuzz(
+                                       output_format="test: {fuzzed_string}"
+                                  )
+                              ):
+            if index >= 600:
+                break
+            self.assertTrue(
+                result.value.startswith("test:"),
+                msg="result should be in the specified format."
+            )
+    def test_sequential_fuzz_length(self):
+        """
+        Test to make sure that the fuzzer is creating the proper sized string.
+        """
+        self.fuzzer.initialize()
+        for index, result in enumerate(
+                                  self.fuzzer.sequential_fuzz(
+                                       length=6
+                                  )
+                              ):
+            if index >= 600:
+                break
+            self.assertTrue(
+                len(result.value) == 6,
+                msg="result should be the specified length."
+            )
+    def test_sequential_fuzz_evaluator(self):
         """
         Test to make sure that custom evaluators work as expected.
         """
@@ -71,7 +103,7 @@ class TestFuzzer(unittest.TestCase):
         def testing_evaluator(value):
             return chr(value)
         for number, result in enumerate(
-                                  self.fuzzer.fuzz(
+                                  self.fuzzer.sequential_fuzz(
                                        character_evaluator=testing_evaluator
                                   )
                               ):
@@ -82,16 +114,53 @@ class TestFuzzer(unittest.TestCase):
                     ord(character) in range(256),
                     msg="A custom character_evaluator should work."
                 )
-    def test_fuzz_random(self):
+    def test_sequential_fuzz_minimum(self):
+        """
+        Test to make sure that the result is generated with the proper minimum
+        character value.
+        """
+        self.fuzzer.initialize()
+
+        for index, result in enumerate(
+                                 self.fuzzer.sequential_fuzz(
+                                      minimum=25
+                                 )
+                              ):
+            if index >= 600:
+                break
+            for character in result.value:
+                self.assertTrue(
+                    ord(character) in range(25,255),
+                    msg="All characters should be greater than the minimum."
+                )
+    def test_sequential_fuzz_maximum(self):
+        """
+        Test to make sure that the result is generated with the proper maximum
+        character value.
+        """
+        self.fuzzer.initialize()
+
+        for index, result in enumerate(
+                                 self.fuzzer.sequential_fuzz(
+                                      maximum=245
+                                 )
+                              ):
+            if index >= 600:
+                break
+            for character in result.value:
+                self.assertTrue(
+                    ord(character) <= 245,
+                    msg="All characters should be under the maximum value."
+                )
+
+    def test_random_fuzz(self):
         """
         Test to make sure that generated characters are valid.
         """
         self.fuzzer.initialize()
 
         for number, result in enumerate(
-                                  self.fuzzer.fuzz(
-                                       random_generation=True
-                                  )
+                                  self.fuzzer.random_fuzz()
                               ):
             if number >= 600:
                 break
@@ -100,7 +169,7 @@ class TestFuzzer(unittest.TestCase):
                     ord(character) in range(256),
                     msg="Random character should be in ASCII range."
                 )
-    def test_fuzz_random_prohibit(self):
+    def test_random_fuzz_prohibit(self):
         """
         Test to make sure that generated characters are not in the prohibited
         list.
@@ -109,8 +178,7 @@ class TestFuzzer(unittest.TestCase):
 
         prohibited = ["a", "b"]
         for number, result in enumerate(
-                                  self.fuzzer.fuzz(
-                                       random_generation=True,
+                                  self.fuzzer.random_fuzz(
                                        prohibit=prohibited
                                   )
                               ):
@@ -120,6 +188,96 @@ class TestFuzzer(unittest.TestCase):
                 self.assertTrue(
                     character not in prohibited,
                     msg="Generated characters should not be in prohibited list."
+                )
+    def test_random_fuzz_evaluator(self):
+        """
+        Test to make sure that the evaluator is being used.
+        """
+        self.fuzzer.initialize()
+
+        for index, result in enumerate(
+                                  self.fuzzer.random_fuzz(
+                                       character_evaluator=chr
+                                  )
+                              ):
+            if index >= 600:
+                break
+            for character in result.value:
+                self.assertTrue(
+                    ord(character) in range(256),
+                    msg="The proper character evaluator should be used."
+                )
+    def test_random_fuzz_length(self):
+        """
+        Test to make sure that the proper length of string is generated.
+        """
+        self.fuzzer.initialize()
+
+        for index, result in enumerate(
+                                 self.fuzzer.random_fuzz(
+                                      length=6
+                                 )
+                              ):
+            if index >= 600:
+                break
+            self.assertTrue(
+                len(result.value) == 6,
+                msg="result should be the specified length."
+            )
+    def test_random_fuzz_format(self):
+        """
+        Test to make sure that the proper format is being used for results.
+        """
+        self.fuzzer.initialize()
+
+        for index, result in enumerate(
+                                 self.fuzzer.random_fuzz(
+                                      output_format="test:{fuzzed_string}"
+                                 )
+                              ):
+            if index >= 600:
+                break
+            self.assertTrue(
+                result.value.startswith("test:"),
+                msg="The result should be in the correct format."
+            )
+    def test_random_fuzz_minimum(self):
+        """
+        Test to make sure that the result is generated from the proper minimum
+        value.
+        """
+        self.fuzzer.initialize()
+
+        for index, result in enumerate(
+                                 self.fuzzer.random_fuzz(
+                                      minimum=25
+                                 )
+                              ):
+            if index >= 600:
+                break
+            for character in result.value:
+                self.assertTrue(
+                    ord(character) >= 25 < 255,
+                    msg="All characters should be greater than the minimum."
+                )
+    def test_random_fuzz_maximum(self):
+        """
+        Test to make sure that the result is generated with the proper maximum
+        value.
+        """
+        self.fuzzer.initialize()
+
+        for index, result in enumerate(
+                                 self.fuzzer.random_fuzz(
+                                      maximum=245
+                                 )
+                              ):
+            if index >= 600:
+                break
+            for character in result.value:
+                self.assertTrue(
+                    ord(character) <= 245,
+                    msg="All characters should be greater than the minimum."
                 )
     @unittest.skip("TO BE DEPRECATED. DOES NOT MATCH FINAL DESIGN.")
     def test_tail(self):
