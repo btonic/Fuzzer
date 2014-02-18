@@ -1,48 +1,63 @@
 #include <Python.h>
 
-static PyObject *MaximumIncrementReached;
 
+//Define internal generator state
+typedef struct{
+  PyObject_HEAD
+  PyListObject values;
+  PyIntObject  index;
+  PyIntObject maximum;
+  PyIntObject minimum;
+  PyObject reset;
+} generator_state;
+
+//Define functions in the module
 static PyMethodDef IncrementMethods[] = {
     {"increment",  increment_increment, METH_VARARGS | METH_KEYWORDS,
      "Increment a list for the fuzzer."},
-    {NULL, NULL, 0, NULL}        /* Sentinel */
+     /* Sentinel */
+    {NULL, NULL, 0, NULL}
 };
 
 PyMODINIT_FUNC
 initincrement(void){
-	PyObject *m;
-
-    m = Py_InitModule("increment", IncrementMethods);
-    MaximumIncrementReached = PyErr_NewException(NULL, NULL, NULL);
-    Py_INCREF(MaximumIncrementReached);
-    PyModule_AddObject(m, "Incrimentation limit reached.", MaximumIncrementReached);
+	//TODO: implement
 }
 
-static PyObject *
-increment_increment(PyObject *self, PyObject *args, PyObject *kwargs)
-{
-	PyListObject *values;
-    int index;
-    int minimum = 0;
-    int maximum = 255;
-    PyObject reset;
-    PyObject _called_from_func = false;
-    static char *kwlist[] = {"minimum", "maximum", 
-                             "reset", "_called_from_func", NULL};
 
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs,
-    								 "Oi|iiOO", kwlist,
-    	                             &values, &index
-    	                             &minimum, &maximum,
-    	                             &reset, &_called_from_func ))
-        return NULL;
-    if (index >= 0){
-    	if (PyList_GetItem(values, index)+1 >= maximum){
-    		if (PyObject_IsTrue(_called_from_func)
-    			&& index == 0){
-    
-    		}
-    	}
+PyObject*
+increment_increment_iternext(PyObject *self){
+    generator_state *state = (generator_state *)self;
+
+    if (state->index >= 0){
+    	if ((PyList_GetItem(state->values, state->index)+1) >= state->maximum){
+	    	if (state->index == 0){
+	    		//we hit the first values maximum, bail out
+	    		PyErr_SetNone(PyExc_StopIteration);
+	            return NULL;
+	        }
+	    	if (PyObject_IsTrue(state->reset)){
+	    		//reset the index
+	    		PyList_SetItem(state->values, state->index, state-> minimum);
+	    		//move index to the left
+	    		(state->index)--;
+	    		PyObject *tmp = state->values;
+	    		//return copy of the list
+	    		return tmp;
+	    	} else {
+	    	    //do not reset, but move left and incriment
+	    	    (state->index)--;
+	    	    PyList_SetItem()
+	    } else{
+	    	PyList_SetItem(state->values, state->index,
+	    		           PyList_GetItem(state->values,state->index)+1);
+	    	PyObject *tmp = state->values;
+	    	return tmp;
+	    }
     }
-    return Py_BuildValue("i", sts);
+}
+PyObject*
+increment_increment_iter(PyObject *self){
+	Py_INCREF(self);
+	return self;
 }
