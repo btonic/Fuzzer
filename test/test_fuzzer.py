@@ -130,8 +130,8 @@ class TestFuzzer(unittest.TestCase):
                 break
             for character in result.value:
                 self.assertTrue(
-                    ord(character) in range(25,255),
-                    msg="All characters should be greater than the minimum."
+                    ord(character) >= 25,
+                    msg="All characters should be greater than the minimum. value: %s" % ord(character)
                 )
     def test_sequential_fuzz_maximum(self):
         """

@@ -38,29 +38,38 @@ class Fuzzer(object):
         Trigger SQL engine to commit all values awaiting insertion.
         """
         self.sql_engine.commit_pool()
-    def _increment(self, values, index, minimum=0,
-                   maximum=255, reset=True,
-                   _called_from_func=False):
+
+    def _increment(self, values, minimum=0,
+                  maximum=255, reset=True):
         """
         Handles incrementation for fuzzer.
         """
-        if index >= 0:
-            if (values[index]+1) >= maximum:
-                if _called_from_func and index == 0:
-                    raise MaximumIncrementReached(
-                          "Incrementation limit reached")
+        if values[0] >= maximum:
+            #first index hit its maximum, check if the rest are maxed
+            done = False
+            for value in values:
+                if value < maximum:
+                    #there is a value not maxed, incrementation continues
+                    done = False
+                    break
+                elif value >= maximum:
+                    done = True
+            #all values have been created, finish the function
+            if done:
+                return True
+        for index, value in enumerate(reversed(values)):
+            if value >= maximum:
                 if reset:
-                    values[index] = minimum
-                try:
-                    self._increment(values, index - 1,
-                                   maximum=maximum, reset=reset,
-                                   _called_from_func=True
-                                   )
-                except MaximumIncrementReached:
-                    return
-            else:
-                values[index] = values[index] + 1
-                return
+                    #reset the index and jump to next iteration
+                    values[(len(values)-1)-index] = minimum
+                    continue
+            elif value < maximum:
+                #increment, there still might be more to increment, so assume
+                #not done.
+                values[(len(values)-1)-index] += 1
+                return False
+
+
 
     def sequential_fuzz(self, prohibit=None, length=5, 
                         output_format="{fuzzed_string}",
@@ -96,23 +105,20 @@ class Fuzzer(object):
             raise TypeError("output_format should be a string.")
 
         if prohibit == None:
-            done = False
             temp_list = [minimum]*length
-            while not done:
+            while not self._increment(temp_list,
+                                      minimum=minimum, maximum=maximum):
+
                 attempt = output_format.format(fuzzed_string="".join(
                 list(character_evaluator(character) for character in temp_list))
                 )
                 yield Result(self, attempt, prohibited=prohibit)
-                try:
-                    self._increment(temp_list, length - 1,
-                                    minimum=minimum, maximum=maximum)
-                except MaximumIncrementReached:
-                    done = True
         if prohibit != None:
-            done = False
             pass_attempt = False
             temp_list = [minimum]*length
-            while not done:
+            while not self._increment(temp_list,
+                                      minimum=minimum, maximum=maximum):
+
                 attempt = output_format.format(fuzzed_string="".join(
                 list(character_evaluator(character) for character in temp_list))
                 )
@@ -121,19 +127,9 @@ class Fuzzer(object):
                         pass_attempt = True
                 if pass_attempt:
                     pass_attempt = False
-                    try:
-                        self._increment(temp_list, length - 1,
-                                        minimum=minimum, maximum=maximum)
-                    except MaximumIncrementReached:
-                        done = True
                     continue
                 else:
                     yield Result(self, attempt, prohibited=prohibit)
-                    try:
-                        self._increment(temp_list, length - 1,
-                                        minimum=minimum, maximum=maximum)
-                    except MaximumIncrementReached:
-                        done = True
     def random_fuzz(self, prohibit=None, character_evaluator=chr,
                     output_format="{fuzzed_string}", length=5,
                     minimum=0, maximum=255):
@@ -231,6 +227,7 @@ class Fuzzer(object):
         first_result = None
         last_result = None
         tail_from_id = False
+        limit_by = "LIMIT 1;"
         while True:
             #after all values have been iterated currently in database,
             #this waits and watches the DB for any new rows added.
@@ -238,26 +235,32 @@ class Fuzzer(object):
                 if order_set:
                     #override the order, order by when it was created to
                     #grab latest entry
-                    query = query_without_order + " ORDER BY attempt_id DESC LIMIT 1;"
+                    query = query_without_order + " ORDER BY attempt_id DESC"
                 else:
                     #add our order to the query, there isnt one already
-                    query = query.rstrip(";") + " ORDER BY attempt_id DESC LIMIT 1;"
+                    query = query.rstrip(";") + " ORDER BY attempt_id DESC"
                 while True:
-                    #convert out of a generator and pull the result. Limited to 1
-                    result = list(self.sql_engine.read_query(query))[0]
+                    #convert out of a generator and pull the result.
+                    #limited to 1.
+                    result = list(
+                                self.sql_engine.read_query(query + limit_by)
+                             )[0]
                     if isinstance(last_result, NoneType):
                         last_result = result
                     else:
                         if last_result == result:
                             pass
                         else:
+                            limit_by = "LIMIT %s;" %\
+                                       (last_result[0] - result[0])
                             last_result = result
                             yield Result(self, result[1], prohibited=result[2])
             else:
-                for index, result in enumerate(self.sql_engine.read_query(query)):
+                for index, result in enumerate(
+                                        self.sql_engine.read_query(query)
+                                     ):
                     if index == 0:
                         if isinstance(first_result, NoneType):
-                            print "first_result"
                             first_result = result
                         else:
                             if result == first_result:
