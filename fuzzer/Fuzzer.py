@@ -180,7 +180,7 @@ class Fuzzer(object):
                 ))
                 yield Result(self, attempt, prohibited=prohibit)
     def tail(self, table_name, select_conditions={},
-             order_by="created_at ASC"):
+             order_by="created_at DESC"):
 
         if not isinstance(select_conditions, dict):
             raise TypeError("select_conditions must be a dict.")
@@ -197,7 +197,7 @@ class Fuzzer(object):
                and not isinstance(keyword, NoneType)\
                and not keyword == "":
                 if first_iteration:
-                    query += "WHERE {keyword} = {condition}".format(
+                    query += " WHERE {keyword} = {condition}".format(
                             keyword=keyword,
                             condition=repr(condition)\
                                       if isinstance(condition, str)\
@@ -227,7 +227,7 @@ class Fuzzer(object):
         first_result = None
         last_result = None
         tail_from_id = False
-        limit_by = "LIMIT 1;"
+        limit_by = " LIMIT 1;"
         while True:
             #after all values have been iterated currently in database,
             #this waits and watches the DB for any new rows added.
@@ -251,11 +251,12 @@ class Fuzzer(object):
                         if last_result == result:
                             pass
                         else:
-                            limit_by = "LIMIT %s;" %\
+                            limit_by = " LIMIT %s;" %\
                                        (last_result[0] - result[0])
                             last_result = result
                             yield Result(self, result[1], prohibited=result[2])
             else:
+                print query
                 for index, result in enumerate(
                                         self.sql_engine.read_query(query)
                                      ):
