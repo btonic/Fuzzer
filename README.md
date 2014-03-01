@@ -47,7 +47,7 @@ Running this will create the database file specified in the initialization of th
 Now we can begin generating values. To begin, we can simply use the `.sequential_fuzz()` generator supplied by `Fuzzer`. By default this will generate sequential strings of a length of 5. To generate the first 100 results, we can use:
 
 ```python
->>> for index, result in enumerate(fuzz_instance.fuzz()):
+>>> for index, result in enumerate(fuzz_instance.sequential_fuzz()):
 ...     if index == 100:
 ...         break
 ...     print repr(result.value)
