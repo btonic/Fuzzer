@@ -44,7 +44,7 @@ If you assign the `database` parameter to another location, it will use that loc
 
 Running this will create the database file specified in the initialization of the `Fuzzer` instance if it does not exist, as well as create the table if that does not exist already. If the database file exists, but the table does not, the table will be created. If the table does exist, then it will simply use that.
 
-Now we can begin generating values. To begin, we can simply use the `.fuzz()` generator supplied by `Fuzzer`. By default this will generate sequential strings of a length of 5. To generate the first 100 results, we can use:
+Now we can begin generating values. To begin, we can simply use the `.sequential_fuzz()` generator supplied by `Fuzzer`. By default this will generate sequential strings of a length of 5. To generate the first 100 results, we can use:
 
 ```python
 >>> for index, result in enumerate(fuzz_instance.fuzz()):
@@ -68,11 +68,27 @@ If you decide to use `.success()` or `.fail()`, the attempt will automatically b
 Fuzzer.fuzz -> Result -> Result.success() or Result.fail() -> Result added to insertion pool -> Fuzzer.commit_to_database() -> Results inserted into database
 ```
 
-The following parameters can be passed to the `fuzz()` function for refinement of generated results.
+The following parameters can be passed to the `sequential_fuzz()` function for refinement of generated results.
 
-* `random_generation` is set to either `True` or `False`. If this is true, then instead of sequential values being generated, the `random` module will be used to generate each character in the string returned.
-* `prohibit` is set to a list of characters you wish to disallow in the generated values. If you wish to allow everything, this is set to `None`.
-* `length` is the length of the string to be generated.
-* `output_format` is the format in which you want your results. This defaults to `"{fuzzed_string}"`, however this can be changed to any string as long as `{fuzzed_string}` is present in it. This string will have the generated string formatted into it using `.format(fuzzed_string=...)` so it is required that `{fuzzed_string}` is present somewhere inside of it.
-* `character_evaluator` is the function used to translate each integer value to a character. This function should recieve one value and return a string. The default function is `chr()`.
-* `maximum` is the maximum value that each index can reach. The default is `255`. If you change this to be higher than `255` with other default values, this will raise an error because `chr` can only translate to ASCII values.
+* `prohibit`: This is a list of strings (only one character long each) that will not be allowed in the generated value. If a character in prohibit is found in the generated value, then the value will not be yielded, and it will be skipped.
+* `length`: This is how long the generated value should be.
+* `output_format`: This is how the fuzzer should yield the value. This is formatted with `.format()` so anywhere in the format that you wish to have the value, simply use `{fuzzed_string}`.
+* `character_evaluator`: This is the function that the fuzzer uses to convert the internal number to a string value. If you wish to define your own, it must accept only one required parameter, and return only one character.
+* `minimum`: This is the minimum value for the fuzzer. This means, if you start with a `minimum` of `5` and a `length` of `2`, then you will begin with `[2,2]` and it will continue up to the maximum, then reset to the minimum once carrying is completed: `[2,3],[2,4]...[2,maximum],[3,2]...`.
+* `maximum`: This is the maximum value for the fuzzer. If any value in the fuzzer reaches this, it will be reset to the `minimum` value.
+
+
+Now, what if you want to randomly generate these values instead of generating them sequentially? Well, `.random_fuzz()` has you covered. It works exactly like `.sequential_fuzz()`, except for a slight difference in some of its parameters meanings:
+
+* `minimum`: This is the minimum value possible to show up in the result. Nothing lower will be generated.
+* `maximum`: This is the maximum value possible to show up in the result. Nothing higher will be generated.
+
+Now that we can generate the values, define if they can work or not, why do we store them in a database? Well, so that we can use it later, or use it asynchrously. If you store the generated values in the database (using `.success()` or `.fail()`), we can use the function `.tail()` to iterate and watch a specific table in the database. This works by ordering the database, then iterating through the present rows and yielding them as a `Result` object. You can then use the `.success()` and `.fail()` functions appropriately. However, once all the rows have been iterated, the `.tail()` function will continue to watch the database and yield any new values added to the database (returned as a `Result` object). The `.tail()` function accepts the following parameters:
+
+* `table_name`: This is the table to iterate and follow.
+* `select_conditions`: This is what you will use to filter the values returned. For example, if you want all successful attempts, you would use `select_conditions={"successful":"True"}`.
+* `order_by`: This is how you wish to order the iteration of values. This *DOES NOT* apply to watching the database, it only applies to the iteration of existing values.
+
+
+##Thread Safety
+All of the functions available through a `Fuzzer` instance are thread safe. For instance, you can use `fuzz_obj.sequential_fuzz()` in one thread, and `fuzz_obj.tail(...)` in another thread and not have to worry about resource management.
