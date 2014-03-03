@@ -256,7 +256,6 @@ class Fuzzer(object):
                             last_result = result
                             yield Result(self, result[1], prohibited=result[2])
             else:
-                print query
                 for index, result in enumerate(
                                         self.sql_engine.read_query(query)
                                      ):
