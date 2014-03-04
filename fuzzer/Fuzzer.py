@@ -5,14 +5,42 @@ import datetime
 
 class Fuzzer(object):
     """
-    Fuzzer is used to either generate fuzzed values, or to read fuzzed values
-    and catch up or tail an already running fuzzer.
+    Fuzzer is used to either generate fuzzed values, or catch up and
+    tail a previous fuzzer.
+
+    Methods:
+
+    public:
+        __init__(self, database="fuzzerdb.db",
+                 username=None, password=None,
+                 cache_tablenames=True,
+                 sql_engine=SQLiteEngine,
+                 table_name=datetime.datetime.today().strftime(
+                                                     "attempts%m%d%y"))
+        initialize(self)
+        commit_to_database(self)
+        sequential_fuzz(self, prohibit=None, length=5,
+                        output_format="{fuzzed_string}",
+                        character_evaluator=chr,
+                        minimum=0, maximum=255)
+        random_fuzz(self, prohibit=None, length=5,
+                    output_format="{fuzzed_string}",
+                    character_evaluator=chr,
+                    minimum=0, maximum=255)
+    private:
+        _increment(self, values, minimum=0,
+                   maximum=255, reset=True)
+
     """
-    def __init__(self, database="fuzzerdb.db", cache_tablenames=True,
+    def __init__(self, database="fuzzerdb.db",
+                 username=None, password=None,
+                 cache_tablenames=True,
                  sql_engine=SQLiteEngine,
                  table_name=datetime.datetime.today().strftime(
                                                      "attempts%m%d%y")):
+        #needed so that we can catch exceptions thrown
         self.sql_engine_module = sql_engine
+        #needed for persistant storage.
         self.sql_engine = sql_engine.SQLEngine(database,
                                                tables_to_cache=cache_tablenames)
         self.table_name = table_name
@@ -40,9 +68,23 @@ class Fuzzer(object):
         self.sql_engine.commit_pool()
 
     def _increment(self, values, minimum=0,
-                  maximum=255, reset=True):
+                   maximum=255, reset=True):
         """
-        Handles incrementation for fuzzer.
+        Handles incrementation of a list in place.
+
+        Arguments:
+
+        values: This is the list that will be incremented. Should only
+        be integers in the list.
+
+        minimum: This is used for resetting values in the list once
+        they have hit the maximum.
+
+        maximum: This is used for determining if the list is completely
+        incremented, as well as determining to reset or not.
+
+        reset: This is used to tell the incrementor to reset a value at
+        it's maximum or not.
         """
         if values[0] >= maximum:
             #first index hit its maximum, check if the rest are maxed
@@ -74,10 +116,33 @@ class Fuzzer(object):
                         character_evaluator=chr,
                         minimum=0, maximum=255):
         """
-        Generates all possibilities with a given length. If random is passed,
-        it will generate random values with a given length in a range between
-        0 and `maximum`. The character_evaluator will be used to convert the
-        number into its character form.
+        Generates all possibilities sequentially with a given length.
+
+        Arguments:
+
+        length: The length of the fuzzed string. Does not pertain to length
+        of output_format.
+
+        prohibit: A list of prohibited characters. Any results generated
+        with a character in this list will be skipped and not returned.
+
+        output_format: The format in which the fuzzed string sould be output.
+        This requires the format variable `fuzzed_string` to be present in
+        the string. The generated result will be formatted into this string
+        anywhere that the `fuzzed_string` is located.
+
+        character_evaluator: This is the function used to convert the internal
+        number list into characters. This function can be replaced with any
+        function that accepts one required parameter and returns one character.
+
+        minimum: This is the minimum value of a number in the internal number
+        list that will be generated. This directly translates into the lowest
+        character that will be generated in the result.
+
+        maximum: This is the maximum value of a number in the internal number
+        list that will be generated. This directly translates into the highest
+        character that will be generated in the result.
+
         """
         #make sure everything is the correct type to prevent undefined behavior
         if not isinstance(minimum, int):
@@ -145,6 +210,39 @@ class Fuzzer(object):
                     output_format="{fuzzed_string}",
                     character_evaluator=chr,
                     minimum=0, maximum=255):
+        """
+        Generates all possibilities randomly with a given length.
+
+        Arguments:
+
+        length: The length of the fuzzed string. Does not pertain to length
+        of output_format.
+
+        prohibit: A list of prohibited characters. Any results generated
+        with a character in this list will be skipped and not returned.
+
+        output_format: The format in which the fuzzed string sould be output.
+        This requires the format variable `fuzzed_string` to be present in
+        the string. The generated result will be formatted into this string
+        anywhere that the `fuzzed_string` is located.
+
+        character_evaluator: This is the function used to convert the internal
+        number list into characters. This function can be replaced with any
+        function that accepts one required parameter and returns one character.
+
+        minimum: This is the minimum value of a number in the internal number
+        list that will be generated. This directly translates into the lowest
+        character that will be generated in the result. No character below
+        this will be present in the output, despite it being randomly generated.
+        (uses random.randrange())
+
+        maximum: This is the maximum value of a number in the internal number
+        list that will be generated. This directly translates into the highest
+        character that will be generated in the result. No character higher
+        than this will be present in the output, despite it being randomly
+        generated.
+        (uses random.randrange())
+        """
         #make sure everything is the correct type to prevent undefined behavior
         if not isinstance(minimum, int):
             raise TypeError("`minimum` must be an integer.")
@@ -208,8 +306,24 @@ class Fuzzer(object):
                 list(character_evaluator(value) for value in temp_list
                 ))
                 yield Result(self, attempt, prohibited=prohibit)
+
     def tail(self, table_name, select_conditions={},
              order_by="created_at DESC"):
+        """
+        Iterate through a table in a given database. Once completed, watches
+        that table for newly added rows.
+
+        Arguments:
+
+        table_name: The table to iterate through and watch.
+
+        select_conditions: The conditions that will filter which results
+        are returned.
+
+        order_by: This is how the iterated results will be ordered. Once
+        all values have been iterated, this order is no longer followed.
+        Instead, the newest rows in the table are returned.
+        """
         #make sure everything is the correct type to prevent undefined behavior
         if not isinstance(select_conditions, dict):
             raise TypeError("select_conditions must be a dict.")
@@ -282,9 +396,11 @@ class Fuzzer(object):
                     result = list(
                                 self.sql_engine.read_query(query + limit_by)
                              )[0]
+                    #make sure that we arent comparing None to a DB result
                     if isinstance(last_result, NoneType):
                         last_result = result
                     else:
+                        #skip yield if the result is the same as the previous one
                         if last_result == result:
                             pass
                         else:
@@ -311,6 +427,8 @@ class Result(object):
     engine insertion queue.
     """
     def __init__(self, fuzzer_instance, attempt, prohibited=None):
+        #pull the fuzzer instances sql_engine so that we can append
+        #values to it's pool
         self.engine_instance = fuzzer_instance.sql_engine
         self.table_name = fuzzer_instance.table_name
         self.value = attempt
@@ -332,6 +450,11 @@ class Result(object):
     def _generate_item(self, success_value):
         """
         Create the item to submit to the SQL engine.
+
+        Arguments:
+
+        success_value: Used as a flag for the result to define success
+        or failure.
         """
         return {"created_at": datetime.datetime.now().strftime("%c"),
                 "updated_at": datetime.datetime.now().strftime("%c"),
