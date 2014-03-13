@@ -21,6 +21,9 @@ class SQLEngine(object):
     def create_database(self, table_name, *columns):
         """
         Create a table in the database if one does not exist.
+        The columns are a list of tuples in the format: (col_name,type,)
+        where both elements of the tuple are strings. table_name will be
+        used to create the table with the given columns.
         """
         cursor = Connection(self.database_path)
         table_exists = self.table_exists(table_name)
@@ -58,10 +61,10 @@ class SQLEngine(object):
         if not self.tables_to_cache:
             self.tables_to_cache = True
         self.cached_tablenames = table_names
-
+        return True
     def table_exists(self, table_name):
         """
-        Search for a table name in the database.
+        Determine if a table exists in the database.
         """
         cursor = Connection(self.database_path, commit_after_execute=False)
         query = "SELECT name FROM sqlite_master\
@@ -171,6 +174,7 @@ class Connection(object):
         Close the database connection.
         """
         self.database.close()
+        return True
 
 class GeneralException(Exception):
     """
