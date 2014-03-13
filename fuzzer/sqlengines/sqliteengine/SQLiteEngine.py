@@ -3,8 +3,8 @@ from threading import Lock
 
 class SQLEngine(object):
     """
-    SQL engine backend for multithreaded use. Allows for in-memory storage to
-    mass-commit.
+    SQLite3 engine for the Fuzzer. It is multi-threadable and pluggable
+    directly to the fuzzer.
     """
     def __init__(self, database_path, tables_to_cache=False):
         self.database_path = database_path
@@ -145,6 +145,24 @@ class SQLEngine(object):
         self.pool_lock_activated = False
         self.pool_lock.release()
         cursor.close()
+        return True
+    def convert_db_to_csv(self, path):
+        """"""
+        self.cache_tablenames()
+        con = Connection(self.database_path, commit_after_execute=False)
+        for table in self.cached_tablenames:
+            #empty query, used for descriptor
+            t_rows = con.execute("SELECT * FROM %s LIMIT 1;" % table)
+            #pull table columns from description
+            t_names = list(map(lambda x: x[0], t_rows.description))
+            #dump all values to the csv file
+            with open(path+"/%s" % table, "w") as o_file:
+                #csv headers
+                o_file.write(",".join(t_names) + "\n")
+                for row in con.execute("SELECT * FROM %s;" % table):
+                    #table rows
+                    o_file.write(",".join(row) + "\n")
+        con.close()
         return True
 
 class Connection(object):
